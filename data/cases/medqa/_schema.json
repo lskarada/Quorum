@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quorum MedQA Case",
+  "type": "object",
+  "required": ["case_id", "presentation", "options", "correct_index"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "source": {"type": "string", "description": "e.g. MedQA-USMLE"},
+    "presentation": {"type": "string"},
+    "options": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 2
+    },
+    "correct_index": {"type": "integer", "minimum": 0},
+    "specialty": {"type": "string"},
+    "difficulty": {"enum": ["easy", "medium", "hard"]}
+  }
+}

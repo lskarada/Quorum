@@ -1,0 +1,59 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.tox/
+
+# Node / Vite
+node_modules/
+.vite/
+dist/
+.turbo/
+*.local
+
+# uv
+.uv/
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data (commit schemas, not contents)
+data/cases/nejm/*.json
+data/cases/medqa/*.json
+!data/cases/**/_schema.json
+data/results/*.json
+!data/cases/**/.gitkeep
+!data/results/.gitkeep
+
+# data/schemas/quorum.schema.json IS committed — it's the generated
+# Pydantic↔TypeScript parity contract. Regenerate with:
+#   cd backend && uv run python scripts/dump_schemas.py
+
+# Logs
+*.log
+
+# Generated artifacts
+.pytest-cache/
+.next/
+out/

@@ -1,0 +1,44 @@
+[project]
+name = "quorum"
+version = "0.1.0"
+description = "Open-source diagnostic deliberation for clinical AI agents"
+readme = "README.md"
+authors = [
+    { name = "Lance Skarada", email = "lance.skarada@gmail.com" }
+]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "anthropic>=0.40.0",
+    "openai>=1.50.0",
+    "google-genai>=0.3.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "mcp>=1.0.0",
+    "sse-starlette>=2.1.0",
+    "httpx>=0.27.0",
+    "rich>=13.9.0",
+    "typer>=0.13.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/quorum"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

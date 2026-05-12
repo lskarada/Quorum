@@ -1,0 +1,1112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quorum schemas",
+  "version": "0.1.0",
+  "$defs": {
+    "AgentRole": {
+      "type": "string",
+      "enum": [
+        "hypothesis",
+        "test_chooser",
+        "challenger",
+        "stewardship",
+        "checklist"
+      ],
+      "title": "AgentRole"
+    },
+    "Citation": {
+      "description": "A primary-source citation backing an agent's claim.",
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Excerpt"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "DiagnosisCandidate": {
+      "$defs": {
+        "Citation": {
+          "description": "A primary-source citation backing an agent's claim.",
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Url"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Excerpt"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "title": "Citation",
+          "type": "object"
+        }
+      },
+      "description": "A single entry in the differential.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "icd10": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icd10"
+        },
+        "posterior": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Posterior",
+          "type": "number"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "supporting_findings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Findings",
+          "type": "array"
+        },
+        "against_findings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Against Findings",
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "posterior",
+        "rationale"
+      ],
+      "title": "DiagnosisCandidate",
+      "type": "object"
+    },
+    "Differential": {
+      "$defs": {
+        "Citation": {
+          "description": "A primary-source citation backing an agent's claim.",
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Url"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Excerpt"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "title": "Citation",
+          "type": "object"
+        },
+        "DiagnosisCandidate": {
+          "description": "A single entry in the differential.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "icd10": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Icd10"
+            },
+            "posterior": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Posterior",
+              "type": "number"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "supporting_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Findings",
+              "type": "array"
+            },
+            "against_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Against Findings",
+              "type": "array"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "posterior",
+            "rationale"
+          ],
+          "title": "DiagnosisCandidate",
+          "type": "object"
+        }
+      },
+      "description": "A ranked differential diagnosis.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/DiagnosisCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "iteration": {
+          "default": 0,
+          "title": "Iteration",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "candidates"
+      ],
+      "title": "Differential",
+      "type": "object"
+    },
+    "NextTest": {
+      "$defs": {
+        "Citation": {
+          "description": "A primary-source citation backing an agent's claim.",
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Url"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Excerpt"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "title": "Citation",
+          "type": "object"
+        }
+      },
+      "description": "A recommended next diagnostic test.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "estimated_cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimated Cost Usd"
+        },
+        "information_gain_estimate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Information Gain Estimate"
+        },
+        "discriminates_between": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Discriminates Between",
+          "type": "array"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "rationale"
+      ],
+      "title": "NextTest",
+      "type": "object"
+    },
+    "AgentMessage": {
+      "$defs": {
+        "AgentRole": {
+          "enum": [
+            "hypothesis",
+            "test_chooser",
+            "challenger",
+            "stewardship",
+            "checklist"
+          ],
+          "title": "AgentRole",
+          "type": "string"
+        },
+        "Citation": {
+          "description": "A primary-source citation backing an agent's claim.",
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Url"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Excerpt"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "title": "Citation",
+          "type": "object"
+        },
+        "DiagnosisCandidate": {
+          "description": "A single entry in the differential.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "icd10": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Icd10"
+            },
+            "posterior": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Posterior",
+              "type": "number"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "supporting_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Findings",
+              "type": "array"
+            },
+            "against_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Against Findings",
+              "type": "array"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "posterior",
+            "rationale"
+          ],
+          "title": "DiagnosisCandidate",
+          "type": "object"
+        },
+        "Differential": {
+          "description": "A ranked differential diagnosis.",
+          "properties": {
+            "candidates": {
+              "items": {
+                "$ref": "#/$defs/DiagnosisCandidate"
+              },
+              "title": "Candidates",
+              "type": "array"
+            },
+            "iteration": {
+              "default": 0,
+              "title": "Iteration",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "candidates"
+          ],
+          "title": "Differential",
+          "type": "object"
+        },
+        "NextTest": {
+          "description": "A recommended next diagnostic test.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "estimated_cost_usd": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Estimated Cost Usd"
+            },
+            "information_gain_estimate": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Information Gain Estimate"
+            },
+            "discriminates_between": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Discriminates Between",
+              "type": "array"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "rationale"
+          ],
+          "title": "NextTest",
+          "type": "object"
+        }
+      },
+      "description": "One utterance from one agent in a deliberation round.",
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/AgentRole"
+        },
+        "iteration": {
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "structured_output": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Differential"
+            },
+            {
+              "$ref": "#/$defs/NextTest"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structured Output"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "tokens_used": {
+          "default": 0,
+          "title": "Tokens Used",
+          "type": "integer"
+        },
+        "cost_usd": {
+          "default": 0.0,
+          "title": "Cost Usd",
+          "type": "number"
+        }
+      },
+      "required": [
+        "role",
+        "iteration",
+        "content"
+      ],
+      "title": "AgentMessage",
+      "type": "object"
+    },
+    "CaseInput": {
+      "description": "Input to the orchestrator.",
+      "properties": {
+        "case_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "presentation": {
+          "title": "Presentation",
+          "type": "string"
+        },
+        "available_tests": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Available Tests",
+          "type": "array"
+        },
+        "budget_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget Usd"
+        },
+        "max_iterations": {
+          "default": 5,
+          "title": "Max Iterations",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "presentation"
+      ],
+      "title": "CaseInput",
+      "type": "object"
+    },
+    "FinalVerdict": {
+      "$defs": {
+        "AgentMessage": {
+          "description": "One utterance from one agent in a deliberation round.",
+          "properties": {
+            "role": {
+              "$ref": "#/$defs/AgentRole"
+            },
+            "iteration": {
+              "title": "Iteration",
+              "type": "integer"
+            },
+            "content": {
+              "title": "Content",
+              "type": "string"
+            },
+            "structured_output": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Differential"
+                },
+                {
+                  "$ref": "#/$defs/NextTest"
+                },
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Structured Output"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "title": "Timestamp",
+              "type": "string"
+            },
+            "tokens_used": {
+              "default": 0,
+              "title": "Tokens Used",
+              "type": "integer"
+            },
+            "cost_usd": {
+              "default": 0.0,
+              "title": "Cost Usd",
+              "type": "number"
+            }
+          },
+          "required": [
+            "role",
+            "iteration",
+            "content"
+          ],
+          "title": "AgentMessage",
+          "type": "object"
+        },
+        "AgentRole": {
+          "enum": [
+            "hypothesis",
+            "test_chooser",
+            "challenger",
+            "stewardship",
+            "checklist"
+          ],
+          "title": "AgentRole",
+          "type": "string"
+        },
+        "Citation": {
+          "description": "A primary-source citation backing an agent's claim.",
+          "properties": {
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Title"
+            },
+            "url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Url"
+            },
+            "excerpt": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Excerpt"
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "title": "Citation",
+          "type": "object"
+        },
+        "DiagnosisCandidate": {
+          "description": "A single entry in the differential.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "icd10": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Icd10"
+            },
+            "posterior": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Posterior",
+              "type": "number"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "supporting_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Supporting Findings",
+              "type": "array"
+            },
+            "against_findings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Against Findings",
+              "type": "array"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "posterior",
+            "rationale"
+          ],
+          "title": "DiagnosisCandidate",
+          "type": "object"
+        },
+        "Differential": {
+          "description": "A ranked differential diagnosis.",
+          "properties": {
+            "candidates": {
+              "items": {
+                "$ref": "#/$defs/DiagnosisCandidate"
+              },
+              "title": "Candidates",
+              "type": "array"
+            },
+            "iteration": {
+              "default": 0,
+              "title": "Iteration",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "candidates"
+          ],
+          "title": "Differential",
+          "type": "object"
+        },
+        "NextTest": {
+          "description": "A recommended next diagnostic test.",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "rationale": {
+              "title": "Rationale",
+              "type": "string"
+            },
+            "estimated_cost_usd": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Estimated Cost Usd"
+            },
+            "information_gain_estimate": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Information Gain Estimate"
+            },
+            "discriminates_between": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Discriminates Between",
+              "type": "array"
+            },
+            "citations": {
+              "items": {
+                "$ref": "#/$defs/Citation"
+              },
+              "title": "Citations",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "rationale"
+          ],
+          "title": "NextTest",
+          "type": "object"
+        }
+      },
+      "description": "Output of the orchestrator after deliberation concludes.",
+      "properties": {
+        "case_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "final_differential": {
+          "$ref": "#/$defs/Differential"
+        },
+        "recommended_next_test": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NextTest"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "iterations_used": {
+          "title": "Iterations Used",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "total_cost_usd": {
+          "title": "Total Cost Usd",
+          "type": "number"
+        },
+        "transcript": {
+          "items": {
+            "$ref": "#/$defs/AgentMessage"
+          },
+          "title": "Transcript",
+          "type": "array"
+        },
+        "termination_reason": {
+          "enum": [
+            "consensus",
+            "budget",
+            "max_iterations",
+            "error"
+          ],
+          "title": "Termination Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "final_differential",
+        "confidence",
+        "iterations_used",
+        "total_tokens",
+        "total_cost_usd",
+        "transcript",
+        "termination_reason"
+      ],
+      "title": "FinalVerdict",
+      "type": "object"
+    },
+    "StreamEvent": {
+      "description": "SSE event emitted during streaming deliberation.",
+      "properties": {
+        "event": {
+          "enum": [
+            "agent_start",
+            "agent_token",
+            "agent_complete",
+            "round_complete",
+            "verdict",
+            "error"
+          ],
+          "title": "Event",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "event",
+        "data"
+      ],
+      "title": "StreamEvent",
+      "type": "object"
+    }
+  }
+}

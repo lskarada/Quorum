@@ -1,0 +1,68 @@
+"""Base class for deliberation agents.
+
+All five specialist agents (Hypothesis, Test-Chooser, Challenger, Stewardship,
+Checklist) inherit from this. Each agent reads the running transcript and
+emits an AgentMessage with structured output appropriate to its role.
+"""
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import AsyncIterator
+
+from quorum.llm.client import LLMClient
+from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput
+
+
+PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+
+
+class Agent(ABC):
+    """Abstract specialist agent."""
+
+    role: AgentRole
+
+    def __init__(self, llm: LLMClient):
+        self.llm = llm
+        self._prompt_template: str | None = None
+
+    @property
+    def prompt_template(self) -> str:
+        """Lazy-load the prompt template from disk on first access."""
+        if self._prompt_template is None:
+            path = PROMPTS_DIR / f"{self.role.value}.md"
+            # TODO: read and return prompt template content
+            raise NotImplementedError(
+                f"prompt_template loader not implemented for {self.role.value}"
+            )
+        return self._prompt_template
+
+    @abstractmethod
+    async def deliberate(
+        self,
+        case: CaseInput,
+        transcript: list[AgentMessage],
+        iteration: int,
+    ) -> AgentMessage:
+        """Produce this agent's contribution to the current round.
+
+        Args:
+            case: The original case input.
+            transcript: All messages from prior rounds, in order.
+            iteration: Current iteration index (0-based).
+
+        Returns:
+            An AgentMessage with role==self.role and structured_output
+            appropriate to this agent type.
+        """
+        ...
+
+    @abstractmethod
+    async def deliberate_stream(
+        self,
+        case: CaseInput,
+        transcript: list[AgentMessage],
+        iteration: int,
+    ) -> AsyncIterator[str]:
+        """Streaming version. Yields token deltas as the agent thinks."""
+        ...

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quorum NEJM CPC Case",
+  "type": "object",
+  "required": ["case_id", "presentation", "ground_truth_diagnosis"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "source": {"type": "string", "description": "e.g. NEJM 2024;390:1234"},
+    "presentation": {"type": "string", "description": "Full vignette"},
+    "available_tests": {"type": "array", "items": {"type": "string"}},
+    "ground_truth_diagnosis": {"type": "string"},
+    "ground_truth_icd10": {"type": "string"},
+    "ground_truth_next_test": {"type": "string"},
+    "difficulty": {"enum": ["easy", "medium", "hard"]},
+    "specialty": {"type": "string"}
+  }
+}
