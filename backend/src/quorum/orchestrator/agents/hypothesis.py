@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import math
 from typing import AsyncIterator
 
 from quorum.orchestrator.agents.base import Agent
@@ -11,6 +13,8 @@ from quorum.orchestrator.schemas import (
     CaseInput,
     Differential,
 )
+
+logger = logging.getLogger(__name__)
 
 _MIN_CANDIDATES = 3
 _MAX_CANDIDATES = 7
@@ -48,6 +52,8 @@ class HypothesisAgent(Agent):
             raise ValueError(f"LLM returned malformed JSON: {e}") from e
 
         candidates = data.get("candidates", [])
+        if not isinstance(candidates, list):
+            raise ValueError("candidates must be a list")
         if not _MIN_CANDIDATES <= len(candidates) <= _MAX_CANDIDATES:
             raise ValueError(
                 f"expected {_MIN_CANDIDATES}-{_MAX_CANDIDATES} candidates, "
@@ -89,11 +95,12 @@ class HypothesisAgent(Agent):
     @staticmethod
     def _normalize_posteriors(diff: Differential) -> Differential:
         total = sum(c.posterior for c in diff.candidates)
-        if total == 0:
+        if math.isclose(total, 0.0, abs_tol=1e-9):
             raise ValueError("posteriors sum to 0; degenerate differential")
         low, high = _POSTERIOR_SUM_TOLERANCE
         if low <= total <= high:
             return diff
+        logger.warning("normalizing differential posteriors: sum was %.4f", total)
         normalized = [
             c.model_copy(update={"posterior": c.posterior / total})
             for c in diff.candidates

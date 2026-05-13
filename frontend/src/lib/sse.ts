@@ -1,6 +1,6 @@
 import type { StreamEvent } from "./types";
 
-const API_BASE = "/api";
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "/api";
 
 /**
  * Open an SSE connection to /api/diagnose/stream and yield typed events.
@@ -72,6 +72,16 @@ function parseFrame(frame: string): StreamEvent | null {
     const data = JSON.parse(dataLines.join("\n"));
     return { event: eventName, data } as StreamEvent;
   } catch {
-    return null;
+    // Surface malformed frames to the consumer as a synthetic error event so
+    // they aren't silently dropped (review feedback).
+    return {
+      event: "error",
+      data: {
+        code: "parse_failure",
+        message: `malformed SSE frame: ${dataLines.join("\n").slice(0, 200)}`,
+        retriable: false,
+        http_status: null,
+      },
+    };
   }
 }

@@ -34,7 +34,9 @@ export default function Diagnose() {
   const [verdict, setVerdict] = useState<FinalVerdict | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<ErrorPayload | null>(null);
+  const [retriesUsed, setRetriesUsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+  const lastPresentationRef = useRef<string>("");
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -49,11 +51,13 @@ export default function Diagnose() {
     };
   }, []);
 
-  const handleStart = async (presentation: string) => {
+  const handleStart = async (presentation: string, isRetry = false) => {
     setRunning(true);
     setMessages([]);
     setVerdict(null);
     setError(null);
+    if (!isRetry) setRetriesUsed(0);
+    lastPresentationRef.current = presentation;
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -92,11 +96,23 @@ export default function Diagnose() {
         {error && (
           <div
             role="alert"
-            className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
+            className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm space-y-2"
           >
             <p className="font-semibold">Error: {error.code}</p>
             <p className="break-words">{error.message || "(no message)"}</p>
-            {error.retriable && <p className="text-xs mt-1 italic">Retryable.</p>}
+            {error.retriable && (
+              <button
+                type="button"
+                disabled={running || retriesUsed >= 1}
+                onClick={() => {
+                  setRetriesUsed((n) => n + 1);
+                  void handleStart(lastPresentationRef.current, true);
+                }}
+                className="inline-flex items-center rounded-md border border-destructive bg-background px-3 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+              >
+                {retriesUsed >= 1 ? "Retry used" : "Retry"}
+              </button>
+            )}
           </div>
         )}
       </aside>

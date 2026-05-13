@@ -136,7 +136,53 @@ async def test_posterior_sum_normalization(
 
     assert isinstance(result.structured_output, Differential)
     total = sum(c.posterior for c in result.structured_output.candidates)
-    assert abs(total - 1.0) < 0.01, f"Expected normalized sum ≈ 1.0, got {total}"
+    assert abs(total - 1.0) < 0.01, f"Expected normalized sum ~ 1.0, got {total}"
+
+
+async def test_posterior_sum_at_lower_boundary_passes_through(
+    agent: HypothesisAgent,
+    mock_llm: LLMClient,
+    base_case: CaseInput,
+) -> None:
+    """Sum exactly 0.95 is inside tolerance and passes through unchanged."""
+    candidates = _three_candidates((0.50, 0.30, 0.15))  # sum = 0.95
+    mock_llm.complete.return_value = _response(_differential_json(candidates))
+
+    result = await agent.deliberate(base_case, [], iteration=0)
+
+    assert isinstance(result.structured_output, Differential)
+    posteriors = [c.posterior for c in result.structured_output.candidates]
+    assert posteriors == [0.50, 0.30, 0.15], "0.95 boundary must NOT be normalized"
+
+
+async def test_posterior_sum_at_upper_boundary_passes_through(
+    agent: HypothesisAgent,
+    mock_llm: LLMClient,
+    base_case: CaseInput,
+) -> None:
+    """Sum exactly 1.05 is inside tolerance and passes through unchanged."""
+    candidates = _three_candidates((0.50, 0.30, 0.25))  # sum = 1.05
+    mock_llm.complete.return_value = _response(_differential_json(candidates))
+
+    result = await agent.deliberate(base_case, [], iteration=0)
+
+    assert isinstance(result.structured_output, Differential)
+    posteriors = [c.posterior for c in result.structured_output.candidates]
+    assert posteriors == [0.50, 0.30, 0.25], "1.05 boundary must NOT be normalized"
+
+
+async def test_candidates_not_list_raises(
+    agent: HypothesisAgent,
+    mock_llm: LLMClient,
+    base_case: CaseInput,
+) -> None:
+    """LLM returns a JSON object where `candidates` is not a list (e.g., null
+    or an object). Must raise ValueError, not TypeError."""
+    payload = json.dumps({"candidates": None, "iteration": 0})
+    mock_llm.complete.return_value = _response(payload)
+
+    with pytest.raises(ValueError, match="candidates"):
+        await agent.deliberate(base_case, [], iteration=0)
 
 
 # ---------------------------------------------------------------------------

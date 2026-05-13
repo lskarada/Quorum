@@ -21,14 +21,15 @@ function mockFetchSSE(body: string, opts: { ok?: boolean; status?: number } = {}
   const { ok = true, status = 200 } = opts;
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
+    vi.fn().mockImplementation(async () => ({
       ok,
       status,
       statusText: ok ? "OK" : "Error",
+      // Fresh ReadableStream per call so retries see a non-consumed body.
       body: makeStreamBody(body),
       headers: new Headers({ "content-type": "text/event-stream" }),
       json: async () => ({}),
-    }),
+    })),
   );
 }
 
@@ -151,7 +152,26 @@ describe("Diagnose page", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/provider_429/);
     expect(alert).toHaveTextContent(/rate limited/);
-    expect(alert).toHaveTextContent(/Retryable/i);
+    // Retry button is rendered when retriable=true
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("retry button is single-use (disabled after one click)", async () => {
+    mockFetchSSE(ERROR_SSE);
+    renderDiagnose();
+    const textarea = screen.getByPlaceholderText(/clinical vignette/i);
+    fireEvent.change(textarea, { target: { value: "will fail" } });
+    fireEvent.click(screen.getByRole("button", { name: /Begin/i }));
+
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(retry).not.toBeDisabled();
+    fireEvent.click(retry);
+
+    // After retry click, the same fetch mock returns ERROR_SSE again -> banner
+    // re-appears with the now-"Retry used" disabled state.
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Retry used/i })).toBeDisabled();
+    });
   });
 
   it("disables the Begin button while running", async () => {

@@ -1,7 +1,9 @@
 """API routes. /api/diagnose (sync) and /api/diagnose/stream (SSE)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 
 from quorum.api.schemas import DiagnoseRequest, DiagnoseResponse
@@ -9,6 +11,8 @@ from quorum.api.streaming import stream_event_to_sse
 from quorum.llm.client import LLMClient
 from quorum.orchestrator.panel import Panel
 from quorum.orchestrator.schemas import CaseInput
+
+_PRESENTATION_MAX_LENGTH = 8000
 
 router = APIRouter()
 
@@ -34,8 +38,8 @@ async def diagnose(
 
 @router.get("/diagnose/stream")
 async def diagnose_stream(
-    presentation: str,
-    case_id: str | None = None,
+    presentation: Annotated[str, Query(max_length=_PRESENTATION_MAX_LENGTH)],
+    case_id: Annotated[str | None, Query(max_length=256)] = None,
     panel: Panel = Depends(get_panel),
 ) -> EventSourceResponse:
     """SSE-streamed diagnosis. Frontend consumes this for live debate display."""

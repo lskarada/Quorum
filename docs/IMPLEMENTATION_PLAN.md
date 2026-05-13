@@ -36,26 +36,36 @@ Validation rules:
 
 ### A2. SSE event envelope
 
-Every frame is the same shape:
+**Implemented shape** (mirrors backend `quorum.orchestrator.schemas.StreamEvent` —
+this is the authoritative wire contract):
 
 ```json
 {
-  "type": "agent_start | agent_message | agent_end | verdict | error",
-  "agent": "hypothesis | null",
-  "iteration": 0,
-  "payload": { ... },
-  "ts": 1700000000.123
+  "event": "agent_start | agent_complete | verdict | error",
+  "data":  { ... }   // schema varies by event, see below
 }
 ```
 
-Payload schema per type:
-- `agent_start`: `{}`
-- `agent_message`: `Differential` (above)
-- `agent_end`: `{tokens_in, tokens_out, latency_ms}`
-- `verdict`: `{top_candidate: DiagnosisCandidate, confidence: float, transcript_summary: str}`
-- `error`: `{code, message, retriable: bool, http_status: int | null}`
+The wire format on the SSE channel follows the native sse_starlette encoding:
 
-SSE framing: `data: <json>\n\n`. No event IDs. Heartbeat every 15s as `event: ping\ndata: {}\n\n`.
+```
+event: <event>
+data: <json-encoded "data" payload>
+
+```
+
+(blank line between frames; no event IDs; no heartbeat in this slice).
+
+Per-event `data` payloads:
+- `agent_start`: `{agent: "hypothesis", iteration: int}`
+- `agent_complete`: `{agent: "hypothesis", differential: Differential,
+   tokens_used: int, cost_usd: float, latency_ms: int}`
+- `verdict`: the full `FinalVerdict` JSON (no wrapper)
+- `error`: `{code, message, retriable, http_status}` per A3 below
+
+The `agent_token` and `round_complete` event variants exist in the backend
+StreamEvent enum but are NOT emitted in the single-agent vertical slice
+(they unlock when streaming deltas and multi-iteration debate land).
 
 ### A3. Error envelope codes (closed set)
 

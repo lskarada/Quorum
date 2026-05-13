@@ -15,8 +15,8 @@ from quorum.orchestrator.schemas import FinalVerdict
 class DiagnoseRequest(BaseModel):
     """POST /api/diagnose request body."""
 
-    presentation: str
-    case_id: Optional[str] = None
+    presentation: str = Field(max_length=8000)
+    case_id: Optional[str] = Field(default=None, max_length=256)
     available_tests: list[str] = Field(default_factory=list)
     budget_usd: Optional[float] = None
     max_iterations: int = 5

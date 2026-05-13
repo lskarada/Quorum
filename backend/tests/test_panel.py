@@ -156,6 +156,44 @@ async def test_diagnose_case_id_propagated(panel_with_mock_hypothesis):
     assert verdict.case_id == "case-123"
 
 
+async def test_diagnose_case_id_none_propagates_as_none(panel_with_mock_hypothesis):
+    """No case_id supplied -> FinalVerdict.case_id is None (not coerced to empty)."""
+    panel = panel_with_mock_hypothesis
+    case = CaseInput(presentation="No case_id here.")
+
+    verdict = await panel.diagnose(case)
+
+    assert verdict.case_id is None
+
+
+async def test_diagnose_confidence_uses_max_posterior_not_first(panel_with_mock_hypothesis):
+    """If the LLM returns candidates in non-descending posterior order, confidence
+    is still the max posterior (not candidates[0])."""
+    panel = panel_with_mock_hypothesis
+    unsorted = AgentMessage(
+        role=AgentRole.HYPOTHESIS,
+        iteration=0,
+        content="unsorted",
+        structured_output=Differential(
+            candidates=[
+                DiagnosisCandidate(name="Low", posterior=0.10, rationale="r"),
+                DiagnosisCandidate(name="High", posterior=0.70, rationale="r"),
+                DiagnosisCandidate(name="Mid", posterior=0.20, rationale="r"),
+            ],
+            iteration=0,
+        ),
+        tokens_used=10,
+        cost_usd=0.001,
+    )
+    panel.hypothesis.deliberate.return_value = unsorted
+    case = CaseInput(presentation="Out-of-order candidates.")
+
+    verdict = await panel.diagnose(case)
+
+    assert verdict.confidence == pytest.approx(0.70)
+    assert verdict.termination_reason == "consensus"
+
+
 # ---------------------------------------------------------------------------
 # diagnose_stream() — SSE generator
 # ---------------------------------------------------------------------------

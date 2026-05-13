@@ -6,7 +6,9 @@ deferred to a later phase.
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import time
 from typing import AsyncIterator
 
@@ -26,7 +28,9 @@ from quorum.orchestrator.schemas import (
     StreamEvent,
 )
 
-_CONSENSUS_THRESHOLD = 0.6  # strict: > 0.6 → consensus
+logger = logging.getLogger(__name__)
+
+_CONSENSUS_THRESHOLD = 0.6
 
 
 class Panel:
@@ -51,7 +55,10 @@ class Panel:
     async def diagnose(self, case: CaseInput) -> FinalVerdict:
         try:
             message = await self.hypothesis.deliberate(case, [], 0)
+        except asyncio.CancelledError:
+            raise
         except Exception:
+            logger.exception("hypothesis.deliberate failed for case %s", case.case_id)
             return self._error_verdict(case)
         return self._build_verdict(case, message)
 
@@ -66,7 +73,10 @@ class Panel:
         started = time.perf_counter()
         try:
             message = await self.hypothesis.deliberate(case, [], 0)
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:
+            logger.exception("hypothesis.deliberate failed mid-stream")
             yield StreamEvent(
                 event="error",
                 data={
@@ -95,8 +105,14 @@ class Panel:
 
     def _build_verdict(self, case: CaseInput, message: AgentMessage) -> FinalVerdict:
         diff = message.structured_output
-        assert isinstance(diff, Differential), "Hypothesis must produce a Differential"
-        top_posterior = diff.candidates[0].posterior if diff.candidates else 0.0
+        if not isinstance(diff, Differential):
+            raise TypeError(
+                "Hypothesis must produce a Differential as structured_output; "
+                f"got {type(diff).__name__}"
+            )
+        top_posterior = (
+            max(c.posterior for c in diff.candidates) if diff.candidates else 0.0
+        )
         termination_reason = (
             "consensus" if top_posterior > _CONSENSUS_THRESHOLD else "max_iterations"
         )
