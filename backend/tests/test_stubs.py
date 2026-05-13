@@ -19,7 +19,6 @@ from quorum.orchestrator.agents import (
     StewardshipAgent,
     TestChooserAgent,
 )
-from quorum.orchestrator.panel import Panel
 from quorum.orchestrator.schemas import CaseInput
 
 # HypothesisAgent's NotImplementedError contract moved to test_agents.py once
@@ -40,10 +39,8 @@ def test_agent_deliberate_raises_not_implemented(AgentCls):
         asyncio.run(agent.deliberate(_case(), [], 0))
 
 
-def test_panel_diagnose_raises_not_implemented():
-    panel = Panel(LLMClient())
-    with pytest.raises(NotImplementedError):
-        asyncio.run(panel.diagnose(_case()))
+# Panel.diagnose NotImplementedError contract moved to test_panel.py once
+# the single-agent vertical slice was implemented.
 
 
 def test_llm_client_complete_raises_not_implemented():
