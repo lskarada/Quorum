@@ -63,12 +63,8 @@ def test_eval_corpus_loader_raises_not_implemented():
         next(load_corpus("nejm"))
 
 
-def test_api_streaming_helper_raises_not_implemented():
-    from quorum.api.streaming import stream_event_to_sse
-    from quorum.orchestrator.schemas import StreamEvent
-
-    with pytest.raises(NotImplementedError):
-        stream_event_to_sse(StreamEvent(event="agent_start", data={}))
+# stream_event_to_sse NotImplementedError contract moved to test_api_diagnose.py
+# coverage (the helper is exercised by every streaming acceptance test).
 
 
 def test_workers_ai_provider_complete_raises_not_implemented():
