@@ -62,7 +62,7 @@ After any meaningful change, run the relevant gate:
 
 ```bash
 # Backend
-cd backend && uv sync && uv run pytest -q
+cd backend && uv sync --extra dev && uv run pytest -q
 
 # Frontend
 cd frontend && pnpm install && pnpm lint && pnpm tsc --noEmit && pnpm vitest run
@@ -124,8 +124,10 @@ When working in this repo, especially as a subagent:
 
 | Phase | Status |
 |-------|--------|
-| Scaffolding (this pass) | In progress |
-| Orchestrator logic | Not started |
+| Scaffolding | Complete |
+| Vertical slice (Hypothesis + Panel + SSE + frontend transcript) | In progress — see `docs/IMPLEMENTATION_PLAN.md` |
+| Remaining 4 agents (TestChooser/Challenger/Stewardship/Checklist) | Not started — stubs intact |
+| Multi-agent consensus loop | Not started |
 | Prompt engineering | Not started |
 | Eval corpus curation | Not started |
 | Demo video | Not started |
