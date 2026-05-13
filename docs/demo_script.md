@@ -24,9 +24,12 @@ One clean diagram. FastAPI + MCP server + Vite/React frontend. Five-agent panel.
 Comparison table:
 - Off-the-shelf Claude Opus 4.7: TBD
 - Off-the-shelf GPT-5: TBD
-- Quorum panel: TBD
+- Off-the-shelf Llama-3.3-70b (Cloudflare Workers AI): TBD
+- Quorum panel — closed members (Opus/GPT-5/Gemini): TBD
+- Quorum panel — open members (Llama/Mistral via Workers AI): TBD
 - MAI-DxO reported: 85.5%
 - Random baseline: ~5%
 
 "Any clinical AI agent ships into a market that needs diagnostic depth. MAI-DxO
-proved this works. Quorum is the open version anyone can call."
+proved this works. Quorum is the open version anyone can call — and the
+open-models-as-a-panel result is the part that doesn't exist anywhere yet."

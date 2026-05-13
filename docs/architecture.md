@@ -45,8 +45,20 @@
                   +--------------+--------------+
                   |  LLMClient (provider shim)  |
                   |  backend/src/quorum/llm/    |
-                  |   Anthropic / OpenAI / Google|
-                  +-----------------------------+
+                  |  Anthropic / OpenAI / Google|
+                  |  / Workers AI               |
+                  +--------------+--------------+
+                                 |
+                  (optional) CLOUDFLARE_AI_GATEWAY_URL
+                                 |
+                                 v
+                  +--------------+--------------+
+                  |  Cloudflare AI Gateway      |
+                  |  cache + observability +    |
+                  |  rate-limit + fallback      |
+                  +--------------+--------------+
+                                 |
+            Anthropic API / OpenAI API / Gemini API / Workers AI
 ```
 
 ## Data flow (HTTP + SSE path)
@@ -113,6 +125,28 @@ All Pydantic models live in
 | MCP stdio   | n/a  | stdio transport; no TCP socket                     |
 
 Vite proxies `/api/*` → `http://localhost:8000/api/*`.
+
+## LLM provider matrix
+
+| Provider     | Models (Quorum-facing name)                              | Lane                  |
+|--------------|----------------------------------------------------------|-----------------------|
+| Anthropic    | `claude-opus-4-7`, `claude-sonnet-4-6`                   | closed-source primary |
+| OpenAI       | `gpt-5`, `gpt-5-mini`                                    | closed-source baseline|
+| Google       | `gemini-2.5-pro`                                         | closed-source baseline|
+| Cloudflare Workers AI | `llama-3.3-70b-instruct`, `mistral-small-3.1-24b-instruct` | **open-source baseline** |
+
+Cloudflare slugs are translated server-side in
+`backend/src/quorum/llm/providers/workers_ai_provider.py`
+(`CF_MODEL_SLUG` dict). The user-facing names above are what the orchestrator
+sees; the provider rewrites them to `@cf/meta/...` form on the wire.
+
+### Cloudflare AI Gateway (optional but recommended)
+
+If `CLOUDFLARE_AI_GATEWAY_URL` is set, **all four** providers route through
+the gateway. Benefits: response caching (huge for eval re-runs — same prompt
+returns from cache, costs zero), per-provider observability, rate-limit
+dashboards, and automatic fallback if a provider 5xx's. Quota: free with
+Workers AI ($50K cap inside the $100K Cloudflare for Startups envelope).
 
 ## Pin choices worth calling out
 

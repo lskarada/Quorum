@@ -70,3 +70,16 @@ def test_api_streaming_helper_raises_not_implemented():
 
     with pytest.raises(NotImplementedError):
         stream_event_to_sse(StreamEvent(event="agent_start", data={}))
+
+
+def test_workers_ai_provider_complete_raises_not_implemented():
+    from quorum.llm.providers.workers_ai_provider import WorkersAIProvider
+
+    provider = WorkersAIProvider()
+    with pytest.raises(NotImplementedError):
+        asyncio.run(
+            provider.complete(
+                messages=[{"role": "user", "content": "x"}],
+                model="llama-3.3-70b-instruct",
+            )
+        )

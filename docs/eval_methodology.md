@@ -51,14 +51,22 @@ report, per run:
 
 For each case in the corpus, the runner is intended to evaluate:
 
-| System                                  | What it is                            | Expected result |
-|-----------------------------------------|---------------------------------------|-----------------|
-| Single-call Claude Opus 4.7             | One-shot prompt, no debate            | TBD             |
-| Single-call GPT-5                       | One-shot prompt, no debate            | TBD             |
-| Single-call Gemini 2.5 Pro              | One-shot prompt, no debate            | TBD             |
-| **Quorum panel** (this project)         | 5-agent debate over N rounds          | TBD             |
-| MAI-DxO (reported, arXiv 2506.22405)    | Microsoft's closed system, NEJM CPC   | **85.5%**       |
-| Random baseline                         | Uniform pick from differential set    | ~5%             |
+| System                                            | What it is                                  | Expected result |
+|----------------------------------------------------|---------------------------------------------|-----------------|
+| Single-call Claude Opus 4.7                        | One-shot prompt, no debate                  | TBD             |
+| Single-call GPT-5                                  | One-shot prompt, no debate                  | TBD             |
+| Single-call Gemini 2.5 Pro                         | One-shot prompt, no debate                  | TBD             |
+| Single-call Llama-3.3-70b-instruct (Workers AI)    | One-shot prompt, no debate, open-source     | TBD             |
+| **Quorum panel — closed models** (Opus/GPT-5/Gemini) | 5-agent debate, frontier closed models  | TBD             |
+| **Quorum panel — open models** (Workers AI Llama/Mistral) | 5-agent debate, open-source members | TBD             |
+| MAI-DxO (reported, arXiv 2506.22405)               | Microsoft's closed system, NEJM CPC         | **85.5%**       |
+| Random baseline                                    | Uniform pick from differential set          | ~5%             |
+
+The **open-panel row is the highest-value research claim**. If open
+models orchestrated as a Quorum panel can approach the closed-panel or
+MAI-DxO numbers, the contribution upgrades from "open reproduction" to
+"any open model orchestrated this way matches closed proprietary models" —
+a substantially more publishable result.
 
 Only **85.5%** and **304 cases** are anchored numbers; everything else
 is TBD until a run is executed.

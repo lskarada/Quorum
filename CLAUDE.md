@@ -24,6 +24,11 @@ The orchestrator-specific rule is captured in `.claude/rules/no-orchestrator-log
 - Key runtime deps (see `backend/pyproject.toml` for the canonical list): `anthropic`, `openai`, `google-genai`, `fastapi`, `uvicorn[standard]`, `pydantic>=2`, `mcp>=1.0.0`, `sse-starlette`, `httpx`, `typer`.
 - Dev deps: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`.
 
+**Cloudflare (4th LLM provider + observability)**
+- **Workers AI** is the 4th provider, sitting alongside Anthropic/OpenAI/Google. Hosts open-source models (Llama, Mistral) for the "open panel vs closed panel" comparison arm of the eval. HTTP-only — uses the existing `httpx` dependency; no new Python package.
+- **AI Gateway** (optional) routes all 4 providers through a single Cloudflare-managed URL for caching, observability, and rate-limit dashboards. Set `CLOUDFLARE_AI_GATEWAY_URL` to enable. Strongly recommended for eval runs because cached responses make re-runs essentially free.
+- **Compute envelope**: $50K Workers AI cap inside the $100K Cloudflare for Startups total; available for 1 year. At expected eval volume (304 cases × 5 agents × ~5 iterations ≈ 7,600 calls) this is comfortably under the cap.
+
 **Node (frontend)**
 - Node 20+, package manager `pnpm`.
 - Framework: **Vite + React 19 + TypeScript** (not Next.js — see "Why not Next.js" below). React 19 came in with the Vite default scaffold; the brief didn't pin a React major, so we kept it.

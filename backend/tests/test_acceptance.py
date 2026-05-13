@@ -56,6 +56,22 @@ def test_backend_panel_importable():
     from quorum.orchestrator.panel import Panel  # noqa: F401
 
 
+@pytest.mark.parametrize(
+    "module_path",
+    [
+        "quorum.llm.providers.anthropic_provider",
+        "quorum.llm.providers.openai_provider",
+        "quorum.llm.providers.google_provider",
+        "quorum.llm.providers.workers_ai_provider",
+    ],
+)
+def test_llm_provider_importable(module_path: str):
+    """All four provider stubs must exist and import cleanly."""
+    import importlib
+
+    importlib.import_module(module_path)
+
+
 # --- Data --------------------------------------------------------------------
 
 
