@@ -16,12 +16,14 @@ from quorum.llm.client import LLMClient
 from quorum.orchestrator.agents import (
     ChallengerAgent,
     ChecklistAgent,
-    HypothesisAgent,
     StewardshipAgent,
     TestChooserAgent,
 )
 from quorum.orchestrator.panel import Panel
 from quorum.orchestrator.schemas import CaseInput
+
+# HypothesisAgent's NotImplementedError contract moved to test_agents.py once
+# its deliberate() was implemented in the vertical-slice phase.
 
 
 def _case() -> CaseInput:
@@ -30,7 +32,7 @@ def _case() -> CaseInput:
 
 @pytest.mark.parametrize(
     "AgentCls",
-    [HypothesisAgent, TestChooserAgent, ChallengerAgent, StewardshipAgent, ChecklistAgent],
+    [TestChooserAgent, ChallengerAgent, StewardshipAgent, ChecklistAgent],
 )
 def test_agent_deliberate_raises_not_implemented(AgentCls):
     agent = AgentCls(LLMClient())

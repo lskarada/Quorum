@@ -31,10 +31,7 @@ class Agent(ABC):
         """Lazy-load the prompt template from disk on first access."""
         if self._prompt_template is None:
             path = PROMPTS_DIR / f"{self.role.value}.md"
-            # TODO: read and return prompt template content
-            raise NotImplementedError(
-                f"prompt_template loader not implemented for {self.role.value}"
-            )
+            self._prompt_template = path.read_text(encoding="utf-8")
         return self._prompt_template
 
     @abstractmethod
