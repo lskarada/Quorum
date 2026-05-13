@@ -83,11 +83,36 @@ export interface FinalVerdict {
   termination_reason: TerminationReason;
 }
 
-// SSE event discriminated union — mirrors backend StreamEvent.
+// Backend error envelope (A3 of docs/IMPLEMENTATION_PLAN.md).
+export type ErrorCode =
+  | "provider_429"
+  | "provider_timeout"
+  | "parse_failure"
+  | "schema_violation"
+  | "internal";
+
+export interface ErrorPayload {
+  code: ErrorCode;
+  message: string;
+  retriable: boolean;
+  http_status: number | null;
+}
+
+// SSE event discriminated union — mirrors backend StreamEvent. Only the
+// variants emitted in the single-agent vertical slice are typed here;
+// agent_token / round_complete will be added when streaming + multi-iter
+// land.
 export type StreamEvent =
-  | { event: "agent_start"; data: { role: AgentRole; iteration: number } }
-  | { event: "agent_token"; data: { role: AgentRole; delta: string } }
-  | { event: "agent_complete"; data: { message: AgentMessage } }
-  | { event: "round_complete"; data: { iteration: number } }
-  | { event: "verdict"; data: { verdict: FinalVerdict } }
-  | { event: "error"; data: { message: string } };
+  | { event: "agent_start"; data: { agent: AgentRole; iteration: number } }
+  | {
+      event: "agent_complete";
+      data: {
+        agent: AgentRole;
+        differential: Differential;
+        tokens_used: number;
+        cost_usd: number;
+        latency_ms: number;
+      };
+    }
+  | { event: "verdict"; data: FinalVerdict }
+  | { event: "error"; data: ErrorPayload };
