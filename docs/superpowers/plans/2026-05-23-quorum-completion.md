@@ -14,6 +14,32 @@
 
 **Gate discipline:** Each phase ends with a runnable verify command + expected output. Do not advance phases until the gate is green AND the gate output is pasted in chat.
 
+## Architect-review integration (2026-05-23)
+
+A senior-architect subagent reviewed the spec and surfaced 18 findings (5 BLOCKER/MAJOR-tier on correctness, 8 MAJOR on planning, 5 MINOR/NIT). The plan below has been amended to address the correctness-critical items inline; the rest are documented here with explicit defer/accept decisions.
+
+**Integrated into plan tasks:**
+- **Termination-logic ordering bug.** Original spec computed `top_posterior > threshold` from the iteration-start Hypothesis output, short-circuiting before Checklist's `recommend_continue=false` could block consensus. Fix: termination check moved to end-of-iteration AND Checklist gets explicit veto on consensus. See Phase 5 Task 5.3.
+- **Parallelize independent agents.** Challenger and Stewardship don't depend on each other's outputs. Run them concurrently via `asyncio.gather`; ~20% wall-clock improvement per case. See Phase 5 Task 5.3.
+- **ComparisonRunner back-pressure trap.** Bounded queue (`maxsize=64`) + client-disconnect cancellation + uniqueness assert on panel_ids. See Phase 6 Task 6.2.
+- **Paired t-test on MRR replaced with Wilcoxon signed-rank.** MRR is bimodal (right/wrong); t-test normality assumption violated. See Phase 8 Task 8.3.
+- **Schema version field.** `FinalVerdict` and eval `manifest.json` gain `schema_version: int = 1` so future enum changes don't silently break old result files. See Phase 5 Task 5.1.
+- **Per-agent temperature/seed in PanelConfig.** Without this, prompt iteration in Phase 4.5 has no determinism handle. See Phase 2 Task 2.2.
+- **Baseline panel config (`baseline_single_call`).** One-Hypothesis-only, no debate, no other agents. The headline comparison reviewers ask for is "panel vs zero-shot single call." See Phase 2 Task 2.3.
+- **Eval-run idempotency.** Runner skips cases whose `case_<id>.json` already exists. Crashes resume cleanly. See Phase 8 Task 8.2.
+- **MCP cost guardrail + auth refusal.** MCP tool refuses to start without `OPENROUTER_API_KEY` and rejects calls projected to exceed `QUORUM_MAX_COST_USD` per call. See Phase 9 Task 9.2.
+- **NEW Phase 4.5: Prompt iteration time-box.** Original plan implied prompt content "just landed" with the agents. Architect flagged 4-7 days realistic. Carve a 2-day budget between Phase 4 and Phase 5 to iterate the five prompts against the smoke script's output until they consistently produce schema-valid JSON.
+
+**Documented and accepted (not changed in plan):**
+- **n=100 statistical power for McNemar is limited.** With ~30% discordant pairs, n=100 detects only large effects (~15pp). Plan retains n=100 for headline runs but `docs/eval_methodology.md` will explicitly state: "Powered to detect a ~15pp accuracy delta; failure to find a significant difference does not imply equivalence. n=300 recommended for future work." See Phase 10 Task 10.2.
+- **Inter-run variance not formally addressed.** All eval runs use `temperature=0` (added to PanelConfig); no 3x replication. Variance is a known limitation, called out in methodology doc.
+- **MCP framed as deliverable not stretch goal.** User explicitly chose to ship MCP. If the project hits a schedule wall in Phase 7 or 8, Phase 9 (MCP) is the first cut. Phase 10 dependencies on MCP are isolated; cutting it does not break any earlier phase's deliverable.
+
+**Deferred to Approach-C roadmap (out of scope for this plan):**
+- Structured JSON logging / observability beyond log lines — added to `docs/roadmap.md` Phase 2 alongside Approach-C items.
+- Generated TypeScript types from Pydantic schema (replacing hand-mirrored `lib/types.ts`) — added to roadmap.
+- Per-panel-config cost-prior estimation — defer; flat $0.10/case estimate accepted with `QUORUM_MAX_COST_USD` guardrail as the real safeguard.
+
 ---
 
 ## Phase 0 — Preflight (3 tasks, ~30 min)
@@ -453,7 +479,10 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class AgentSlot(BaseModel):
-    model: str  # OpenRouter vendor-prefixed string
+    model: str                       # OpenRouter vendor-prefixed string
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    seed: int | None = None          # optional determinism handle
+    max_tokens: int = Field(default=4096, ge=1, le=32000)
 
 
 class PanelConfig(BaseModel):
@@ -461,11 +490,15 @@ class PanelConfig(BaseModel):
     description: str = ""
     max_iterations: int = Field(default=3, ge=1, le=20)
     consensus_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+    schema_version: int = 1
+    # NOTE: `hypothesis` is the only required slot. The four others may be omitted
+    # for the baseline_single_call config — see Phase 2 Task 2.3. Panel.diagnose()
+    # skips agents whose slot is None.
     hypothesis: AgentSlot
-    test_chooser: AgentSlot
-    challenger: AgentSlot
-    stewardship: AgentSlot
-    checklist: AgentSlot
+    test_chooser: AgentSlot | None = None
+    challenger: AgentSlot | None = None
+    stewardship: AgentSlot | None = None
+    checklist: AgentSlot | None = None
 
     @classmethod
     def from_yaml(cls, path: pathlib.Path | str) -> "PanelConfig":
@@ -519,14 +552,27 @@ name: mixed_vendor
 description: Each agent uses a different vendor for inductive-bias diversity (reproduces the 2026 mixed-vendor finding at 5-agent scale).
 max_iterations: 3
 consensus_threshold: 0.6
-hypothesis:    { model: "anthropic/claude-opus-4" }
-test_chooser:  { model: "google/gemini-2.5-pro" }
-challenger:    { model: "openai/gpt-4o" }
-stewardship:   { model: "anthropic/claude-haiku-4-5" }
-checklist:     { model: "meta-llama/llama-3.3-70b-instruct" }
+hypothesis:    { model: "anthropic/claude-opus-4",            temperature: 0.0 }
+test_chooser:  { model: "google/gemini-2.5-pro",              temperature: 0.0 }
+challenger:    { model: "openai/gpt-4o",                       temperature: 0.0 }
+stewardship:   { model: "anthropic/claude-haiku-4-5",         temperature: 0.0 }
+checklist:     { model: "meta-llama/llama-3.3-70b-instruct",  temperature: 0.0 }
 ```
 
-- [ ] **Step 4: Add test that both configs load + listing works**
+- [ ] **Step 3.5: Write `baseline_single_call.yaml` (zero-shot baseline)**
+
+```yaml
+name: baseline_single_call
+description: One Hypothesis call only — no debate, no other agents. The "what would a single LLM do" comparison floor that reviewers will ask for.
+max_iterations: 1
+consensus_threshold: 0.0    # one iter, always terminates as max_iterations
+hypothesis:    { model: "anthropic/claude-opus-4", temperature: 0.0 }
+# test_chooser, challenger, stewardship, checklist intentionally omitted.
+```
+
+The Panel must skip any agent whose slot is None — implement this in Phase 5 Task 5.3.
+
+- [ ] **Step 4: Add test that all three configs load + listing works**
 
 In `backend/tests/test_panel_config.py`, append:
 ```python
@@ -535,6 +581,15 @@ def test_reference_configs_load():
     names = {c.name for c in cfgs}
     assert "single_model_premium" in names
     assert "mixed_vendor" in names
+    assert "baseline_single_call" in names
+
+def test_baseline_has_only_hypothesis():
+    baseline = next(c for c in PanelConfig.list_available() if c.name == "baseline_single_call")
+    assert baseline.hypothesis is not None
+    assert baseline.test_chooser is None
+    assert baseline.challenger is None
+    assert baseline.stewardship is None
+    assert baseline.checklist is None
 ```
 
 Run: `cd backend && uv run pytest tests/test_panel_config.py -v`
@@ -1060,6 +1115,67 @@ cd backend && uv run python scripts/smoke_agents.py                           # 
 
 ---
 
+## Phase 4.5 — Prompt iteration time-box (1 task, 2 days hard cap)
+
+Architect-added phase. Production prompts shipping straight from a template are unlikely to produce schema-valid JSON consistently or to produce *good* diagnostic reasoning. This phase explicitly budgets time to iterate on prompts before the multi-iter loop locks them in.
+
+### Task 4.5.1: Iterate prompts against live cases
+
+**Files:**
+- Modify: `backend/src/quorum/orchestrator/prompts/{hypothesis,test_chooser,challenger,stewardship,checklist}.md`
+- Create: `backend/scripts/prompt_iteration_eval.py` (kept; not deleted at end)
+
+- [ ] **Step 1: Build a small living test bench**
+
+Create `backend/scripts/prompt_iteration_eval.py`:
+```python
+"""Run each agent against 5 fixed cases; report schema-validity rate + qualitative output."""
+import asyncio, json, pathlib
+from quorum.llm.client import LLMClient
+from quorum.orchestrator.schemas import CaseInput
+from quorum.orchestrator.agents.hypothesis import HypothesisAgent
+# ... import the other four
+
+CASES = [
+    CaseInput(case_id="bench_01", presentation="62yo M, 2 days of progressive R-sided weakness and aphasia. BP 168/95. No fever. PMHx HTN, T2DM."),
+    CaseInput(case_id="bench_02", presentation="28yo F, 1 week of polyuria + 15-lb weight loss + nocturnal enuresis. Fingerstick glucose 412."),
+    CaseInput(case_id="bench_03", presentation="45yo M day 3 post-PCI for STEMI, now febrile, chest pain worse leaning forward, pericardial rub."),
+    CaseInput(case_id="bench_04", presentation="71yo F, 3 mo of progressive dyspnea + bilateral lower-leg edema + JVD. No CP."),
+    CaseInput(case_id="bench_05", presentation="34yo M IVDU, 5 days of fever + back pain + paresthesias in feet. T 38.7."),
+]
+
+async def main():
+    llm = LLMClient(default_model="anthropic/claude-haiku-4-5")  # cheap iteration loop
+    # For each agent, for each case: call deliberate, count schema-valid, save outputs to disk for human review
+    ...
+
+if __name__ == "__main__": asyncio.run(main())
+```
+
+- [ ] **Step 2: Iterate** — Run the bench, read every output, edit the prompt files, repeat. Acceptance gates:
+  - **Hypothesis:** 5/5 cases produce 3-7 candidates with posteriors summing to 0.95-1.05.
+  - **TestChooser:** 5/5 produce a NextTest with non-empty `discriminates_between` referencing actual candidate names.
+  - **Challenger:** 5/5 produce non-empty `against_top_candidate` OR explicitly say "no good challenge" (this is fine).
+  - **Stewardship:** at least one of the 5 should reject the proposed test (so we know the agent isn't a yes-machine).
+  - **Checklist:** at least one of the 5 should flag a real issue (insert a deliberate contradiction in bench_06 to validate).
+- [ ] **Step 3: Hard time-box** — if 2 calendar days elapse and the gates above aren't met, the prompts are "good enough" and we move on. Eval can be re-run with better prompts later; the harness is the deliverable.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add backend/src/quorum/orchestrator/prompts/ backend/scripts/prompt_iteration_eval.py
+git commit -m "feat(prompts): production content for all 5 agents (iterated to schema-valid)"
+```
+
+### Phase 4.5 Gate
+
+```bash
+cd backend && uv run python scripts/prompt_iteration_eval.py
+# → all five agents report >=4/5 schema-valid runs on the bench
+```
+
+---
+
 ## Phase 5 — Multi-iteration consensus loop (4 tasks, ~1 day)
 
 ### Task 5.1: Extend `FinalVerdict.termination_reason` to include `checklist_stop`
@@ -1068,20 +1184,16 @@ cd backend && uv run python scripts/smoke_agents.py                           # 
 - Modify: `backend/src/quorum/orchestrator/schemas.py`
 - Modify: `frontend/src/lib/types.ts`
 
-- [ ] **Step 1: Add to backend Literal**
+- [ ] **Step 1: Add to backend Literal + add schema_version + is_error**
 
-In `schemas.py`, change:
-```python
-termination_reason: Literal["consensus", "budget", "max_iterations", "error"]
-```
-to:
-```python
-termination_reason: Literal["consensus", "budget", "max_iterations", "checklist_stop", "error"]
-```
+In `schemas.py`:
+- Change `termination_reason: Literal["consensus", "budget", "max_iterations", "error"]` to `Literal["consensus", "budget", "max_iterations", "checklist_stop", "error"]`.
+- Add to `FinalVerdict`: `schema_version: int = 1`. Bumps when the verdict shape changes; eval result-loaders can refuse mismatched versions.
+- Add to `FinalVerdict`: `is_error: bool = False`. Set True from `_error_verdict()` only. This lets compare-mode UI distinguish a real verdict from a sentinel error verdict (architect MAJOR finding).
 
 - [ ] **Step 2: Mirror in frontend types**
 
-In `frontend/src/lib/types.ts`, extend the `TerminationReason` union.
+In `frontend/src/lib/types.ts`, extend `TerminationReason` union AND add `schema_version: number; is_error: boolean` to the `FinalVerdict` interface.
 
 - [ ] **Step 3: Regenerate schemas**
 
@@ -1143,62 +1255,79 @@ class Panel:
 
 Note: this requires `Agent.__init__` to accept an optional `model` kwarg that defaults to None (in which case the LLMClient's default_model is used). Update `agents/base.py` accordingly. Agent `deliberate()` methods pass `model=self.model` to `llm.complete()`.
 
-- [ ] **Step 2: Implement the loop in diagnose_stream()**
+- [ ] **Step 2: Implement the loop in diagnose_stream() — fixes termination ordering + parallelizes independent agents**
+
+Per architect MAJOR findings: (a) check termination AFTER Checklist runs, not before, so Checklist can veto an apparent consensus; (b) run Challenger || Stewardship concurrently since neither depends on the other.
 
 ```python
 async def diagnose_stream(self, case):
     transcript: list[AgentMessage] = []
     termination = "max_iterations"
-    last_hyp_msg = None
+    iteration = -1  # in case max_iterations == 0 (defensive)
 
     for iteration in range(self.config.max_iterations):
-        for agent_name, agent in [
-            ("hypothesis", self.hypothesis),
-            ("test_chooser", self.test_chooser),
-            ("challenger", self.challenger),
-            ("stewardship", self.stewardship),
-            ("checklist", self.checklist),
-        ]:
-            yield StreamEvent(event="agent_start", data={"agent": agent_name, "iteration": iteration})
-            try:
-                msg = await agent.deliberate(case, transcript, iteration)
-                transcript.append(msg)
-                if agent_name == "hypothesis":
-                    last_hyp_msg = msg
-                yield StreamEvent(
-                    event="agent_complete",
-                    data={
-                        "agent": agent_name,
-                        "iteration": iteration,
-                        "structured_output": msg.structured_output.model_dump()
-                            if hasattr(msg.structured_output, "model_dump")
-                            else msg.structured_output,
-                        "tokens_used": msg.tokens_used,
-                        "cost_usd": msg.cost_usd,
-                    },
-                )
-            except Exception as exc:
-                yield StreamEvent(event="error", data={
-                    "code": self._classify_error(exc), "message": str(exc),
-                    "retriable": self._is_retriable(exc), "http_status": 500,
-                })
-                yield StreamEvent(event="verdict", data=self._error_verdict(case).model_dump(mode="json"))
-                return
+        # 1. Hypothesis (sequential — others depend on it)
+        async for ev, msg in self._run_one("hypothesis", self.hypothesis, case, transcript, iteration):
+            yield ev
+            if msg: transcript.append(msg); hyp_msg = msg
+
+        # 2. TestChooser (sequential — Challenger and Stewardship reference its NextTest)
+        if self.test_chooser:
+            async for ev, msg in self._run_one("test_chooser", self.test_chooser, case, transcript, iteration):
+                yield ev
+                if msg: transcript.append(msg)
+
+        # 3. Challenger || Stewardship (parallel — independent)
+        parallel_agents = [
+            (name, agent) for name, agent in [
+                ("challenger", self.challenger),
+                ("stewardship", self.stewardship),
+            ] if agent is not None
+        ]
+        if parallel_agents:
+            # Emit agent_start events synchronously so the UI shows both spinning at once
+            for name, _ in parallel_agents:
+                yield StreamEvent(event="agent_start", data={"agent": name, "iteration": iteration})
+            tasks = [agent.deliberate(case, transcript, iteration) for _, agent in parallel_agents]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for (name, _), result in zip(parallel_agents, results):
+                if isinstance(result, Exception):
+                    yield StreamEvent(event="error", data={
+                        "code": self._classify_error(result), "message": str(result),
+                        "retriable": self._is_retriable(result), "http_status": 500,
+                    })
+                    yield StreamEvent(event="verdict", data=self._error_verdict(case).model_dump(mode="json"))
+                    return
+                transcript.append(result)
+                yield StreamEvent(event="agent_complete", data=self._agent_complete_payload(name, iteration, result))
+
+        # 4. Checklist (sequential — sees the whole round; its veto can block consensus)
+        chk_msg = None
+        if self.checklist:
+            async for ev, msg in self._run_one("checklist", self.checklist, case, transcript, iteration):
+                yield ev
+                if msg: transcript.append(msg); chk_msg = msg
 
         yield StreamEvent(event="round_complete", data={"iteration": iteration})
 
-        # Check termination
-        top_post = last_hyp_msg.structured_output.candidates[0].posterior
-        if top_post > self.config.consensus_threshold:
-            termination = "consensus"; break
+        # 5. Termination check — runs AFTER Checklist so Checklist can veto consensus
+        top_post = hyp_msg.structured_output.candidates[0].posterior
+        chk_blocks = chk_msg and isinstance(chk_msg.structured_output, dict) and chk_msg.structured_output.get("recommend_continue") is False and not chk_msg.structured_output.get("consistent", True)
+        chk_stops_clean = chk_msg and isinstance(chk_msg.structured_output, dict) and chk_msg.structured_output.get("recommend_continue") is False and chk_msg.structured_output.get("consistent", True)
 
-        chk = transcript[-1].structured_output
-        if isinstance(chk, dict) and chk.get("recommend_continue") is False:
+        if top_post > self.config.consensus_threshold and not chk_blocks:
+            termination = "consensus"; break
+        if chk_stops_clean:
             termination = "checklist_stop"; break
+        # else: continue to next iteration
 
     verdict = self._build_verdict(case, transcript, termination, iteration + 1)
     yield StreamEvent(event="verdict", data=verdict.model_dump(mode="json"))
 ```
+
+`_run_one` is a small helper that yields `(StreamEvent, AgentMessage | None)` tuples for one agent and handles errors. `_agent_complete_payload` builds the dict shown in the original code. Both are private helpers on `Panel`.
+
+**Semantic note:** "Checklist blocks consensus" means `recommend_continue=False AND consistent=False` — the panel thinks it's done but Checklist found a problem. "Checklist clean stop" means `recommend_continue=False AND consistent=True` — Checklist agrees the panel can stop without more rounds (e.g. budget reached).
 
 - [ ] **Step 3: Update `_build_verdict` to take the new args**
 
@@ -1322,18 +1451,27 @@ from ..llm.client import LLMClient
 class ComparisonRunner:
     def __init__(self, configs: list[PanelConfig], llm: LLMClient):
         assert len(configs) == 2, "Compare mode runs exactly two panels"
+        # Architect MAJOR: panel_id collision protection
+        assert configs[0].name != configs[1].name, (
+            f"Compare-mode panel names must differ; got two '{configs[0].name}'"
+        )
         self.panels = [Panel(llm, cfg) for cfg in configs]
         self.panel_ids = [cfg.name for cfg in configs]
 
     async def compare_stream(self, case: CaseInput) -> AsyncIterator[StreamEvent]:
-        queue: asyncio.Queue[tuple[str, StreamEvent] | None] = asyncio.Queue()
+        # Architect MAJOR: bounded queue prevents unbounded growth on slow consumer.
+        # Empirically a single panel emits ~30 events per case; 64 is comfortable headroom.
+        queue: asyncio.Queue[tuple[str, StreamEvent] | None] = asyncio.Queue(maxsize=64)
 
         async def drain(panel_id: str, panel: Panel):
             try:
                 async for ev in panel.diagnose_stream(case):
                     await queue.put((panel_id, ev))
+            except asyncio.CancelledError:
+                # Architect MAJOR: propagate cancellation cleanly when client disconnects.
+                raise
             except Exception as exc:
-                # Per spec: panel failure isolated; emit one error event.
+                # Per spec: panel failure isolated; emit one error event, do not raise.
                 await queue.put((panel_id, StreamEvent(
                     event="error",
                     data={"code": "internal", "message": str(exc), "retriable": False, "http_status": 500},
@@ -1357,6 +1495,15 @@ class ComparisonRunner:
                 # Inject panel_id into event.data
                 new_data = {**ev.data, "panel_id": panel_id}
                 yield StreamEvent(event=ev.event, data=new_data)
+        except asyncio.CancelledError:
+            # Architect MAJOR: client disconnected — cancel both panels' tasks so
+            # in-flight LLM calls stop and we don't burn budget on no one.
+            for t in tasks:
+                if not t.done():
+                    t.cancel()
+            # Await cancellation to surface any cleanup errors
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
         finally:
             for t in tasks:
                 if not t.done():
@@ -1504,12 +1651,13 @@ const [iterations, setIterations] = useState<IterationData[]>([]);
 - [ ] **Step 1: Render side-by-side**
 
 Receives two `FinalVerdict`s. Renders:
-- Top candidate from each
+- **First, check `is_error` on each verdict.** If either panel's verdict has `is_error=true`, render a clearly-marked "Panel failed" state for that column instead of pretending it produced a real result. Architect MAJOR: without this, an error verdict (empty candidates, confidence=0) silently displays as if the panel "had no opinion" — which is misleading.
+- Top candidate from each (or "—" if errored)
 - Top posterior from each
 - Total cost from each
 - Iterations used from each
 - Termination reason from each
-- Highlight in green where they agree, in yellow where they disagree
+- Highlight in green where they agree, in yellow where they disagree, in red where one or both errored
 
 ### Task 7.5: Frontend tests + smoke
 
@@ -1679,19 +1827,29 @@ async def run_eval(
     llm = LLMClient()
     panel = Panel(llm, panel_config)
 
-    manifest = {
-        "panel": panel_config.name,
-        "n_cases": len(cases),
-        "started_at": time.time(),
-    }
-    (results_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    manifest_path = results_dir / "manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+    else:
+        manifest = {
+            "schema_version": 1,
+            "panel": panel_config.name,
+            "n_cases": len(cases),
+            "started_at": time.time(),
+        }
+    manifest_path.write_text(json.dumps(manifest, indent=2))
 
     for case in cases:
+        # Architect MINOR: idempotency — skip cases that already have a result file.
+        # A crashed run at case 73/100 resumes from case 74 on re-invocation.
+        out_path = results_dir / f"case_{case.case_id}.json"
+        if out_path.exists():
+            continue
         verdict = await panel.diagnose(case)
-        (results_dir / f"case_{case.case_id}.json").write_text(verdict.model_dump_json(indent=2))
+        out_path.write_text(verdict.model_dump_json(indent=2))
 
     manifest["finished_at"] = time.time()
-    (results_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2))
     return results_dir
 ```
 
@@ -1770,12 +1928,46 @@ def score_run(results_dir, ground_truth_path) -> dict:
 
 - [ ] **Step 3: Comparison statistics**
 
-Add `compare_runs(run_a_dir, run_b_dir) -> dict` using scipy:
-- McNemar's test on paired top-1 correctness
-- Paired t-test on per-case MRR (scipy.stats.ttest_rel)
-- Bootstrap 95% CI on mean cost difference
+Add `compare_runs(run_a_dir, run_b_dir) -> dict` using scipy. Per architect MAJOR: MRR is bimodal (right/wrong, with 1/rank values clustered near 0 and 1), so paired t-test's normality assumption is violated. Use Wilcoxon signed-rank instead.
 
-Note: scipy is not in deps. Add `scipy>=1.14.0` to `backend/pyproject.toml` and `uv sync`.
+```python
+from scipy.stats import wilcoxon
+from statsmodels.stats.contingency_tables import mcnemar
+
+def compare_runs(run_a_dir, run_b_dir) -> dict:
+    scores_a = _load_per_case_scores(run_a_dir)
+    scores_b = _load_per_case_scores(run_b_dir)
+    paired = _align_by_case_id(scores_a, scores_b)  # list[(score_a, score_b)]
+
+    # McNemar on paired top-1 correctness
+    b_correct_a_wrong = sum(1 for a, b in paired if not a.top1_correct and b.top1_correct)
+    a_correct_b_wrong = sum(1 for a, b in paired if a.top1_correct and not b.top1_correct)
+    contingency = [[0, a_correct_b_wrong], [b_correct_a_wrong, 0]]
+    mcnemar_result = mcnemar(contingency, exact=False, correction=True)
+
+    # Wilcoxon on paired MRR (replaces paired t-test per architect review)
+    mrr_a = [a.mrr_contribution for a, b in paired]
+    mrr_b = [b.mrr_contribution for a, b in paired]
+    if all(x == y for x, y in zip(mrr_a, mrr_b)):
+        wilcoxon_result = {"statistic": 0, "pvalue": 1.0, "note": "all pairs equal; test not meaningful"}
+    else:
+        w = wilcoxon(mrr_a, mrr_b)
+        wilcoxon_result = {"statistic": float(w.statistic), "pvalue": float(w.pvalue)}
+
+    return {
+        "n_cases_paired": len(paired),
+        "mcnemar": {"statistic": float(mcnemar_result.statistic), "pvalue": float(mcnemar_result.pvalue)},
+        "wilcoxon_mrr": wilcoxon_result,
+        "top1_a": sum(1 for a, _ in paired if a.top1_correct) / len(paired),
+        "top1_b": sum(1 for _, b in paired if b.top1_correct) / len(paired),
+        # Bootstrap 95% CI on mean cost difference
+        "cost_delta_ci95": _bootstrap_cost_ci(scores_a, scores_b),
+    }
+```
+
+Note: scipy + statsmodels are not in deps. Add `scipy>=1.14.0` and `statsmodels>=0.14.0` to `backend/pyproject.toml` and `uv sync`.
+
+**Architect-noted limitation to document in methodology:** at n=100 with ~30% discordant pairs, McNemar detects ~15pp accuracy deltas; smaller differences will read as "not significant" but DO NOT imply equivalence. Wilcoxon shares the same power constraint. State this explicitly in `docs/eval_methodology.md` and recommend n=300 for future work.
 
 ### Task 8.4: Report writer
 
@@ -1907,6 +2099,8 @@ from quorum.orchestrator.schemas import CaseInput
 from quorum.llm.client import LLMClient
 
 
+import os
+
 DIAGNOSE_CASE_TOOL_NAME = "diagnose_case"
 DIAGNOSE_CASE_INPUT_SCHEMA = {
     "type": "object",
@@ -1921,10 +2115,32 @@ DIAGNOSE_CASE_INPUT_SCHEMA = {
     "required": ["presentation"],
 }
 
+# Architect MAJOR: cost guardrail on MCP tool. The tool is callable by any MCP
+# client and uses real LLM credits — refuse with a clear error rather than burn
+# budget silently. Conservative per-call ceiling; raise if a user's case is huge.
+_MAX_COST_PER_CALL_USD = float(os.environ.get("QUORUM_MAX_COST_USD", "5.0"))
+
 
 async def diagnose_case_tool(arguments: dict) -> dict:
+    # Architect MAJOR: refuse early if no API key.
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        raise RuntimeError(
+            "diagnose_case requires OPENROUTER_API_KEY. Set it in the environment "
+            "before launching the MCP server."
+        )
+
     panel_name = arguments.get("panel", "single_model_premium")
     cfg = next(c for c in PanelConfig.list_available() if c.name == panel_name)
+
+    # Cost projection guardrail — assume ~$0.10 per iteration per agent.
+    est_agents = sum(1 for slot in (cfg.hypothesis, cfg.test_chooser, cfg.challenger, cfg.stewardship, cfg.checklist) if slot)
+    est_cost = est_agents * cfg.max_iterations * 0.10
+    if est_cost > _MAX_COST_PER_CALL_USD:
+        raise RuntimeError(
+            f"Projected cost ${est_cost:.2f} exceeds QUORUM_MAX_COST_USD=${_MAX_COST_PER_CALL_USD:.2f}. "
+            f"Lower max_iterations or use a cheaper panel."
+        )
+
     panel = Panel(LLMClient(), cfg)
     case = CaseInput(**{k: v for k, v in arguments.items() if k != "panel"})
     verdict = await panel.diagnose(case)
@@ -2097,25 +2313,27 @@ All acceptance criteria from design doc § 13 must be true.
 
 - [x] **Spec coverage:** All 9 sections of the design doc are covered:
   - § 5.1 LLM client → Phase 1
-  - § 5.2 PanelConfig → Phase 2
-  - § 5.3 Five agents → Phases 3 + 4
-  - § 5.4 Multi-iter loop → Phase 5
-  - § 5.5 ComparisonRunner → Phase 6
+  - § 5.2 PanelConfig → Phase 2 (now includes baseline_single_call + temperature/seed)
+  - § 5.3 Five agents → Phases 3 + 4 + Phase 4.5 (prompt iteration)
+  - § 5.4 Multi-iter loop → Phase 5 (termination-ordering fix + parallel agents)
+  - § 5.5 ComparisonRunner → Phase 6 (bounded queue + uniqueness + cancellation)
   - § 5.6 API surface → Phases 5 + 6
-  - § 5.7 Frontend → Phase 7
-  - § 5.8 Eval harness → Phase 8
-  - § 5.9 MCP server → Phase 9
+  - § 5.7 Frontend → Phase 7 (is_error handling in ComparisonSummary)
+  - § 5.8 Eval harness → Phase 8 (Wilcoxon + idempotency + schema_version)
+  - § 5.9 MCP server → Phase 9 (cost guardrail + auth refusal)
   - § 11 Deliverables → Phase 10
 - [x] **Placeholder scan:** No TBD/TODO/"implement later"/"appropriate error handling." Test bodies in Phase 5.2 and 6.1 are marked `...` because they describe the assertion shape but the canned mock setup is mechanical — explicit but verbose; engineer expands at execution time. Acceptable per skill (intent is clear).
-- [x] **Type consistency:** `PanelConfig` shape consistent across Phase 2 (defined), Phase 5 (consumed by Panel), Phase 6 (consumed by ComparisonRunner), Phase 8 (consumed by runner.py), Phase 9 (consumed by MCP tool). `AgentMessage.structured_output` typed as union covers Differential | NextTest | dict for the 4 agent types.
+- [x] **Type consistency:** `PanelConfig` shape consistent across Phase 2 (defined), Phase 5 (consumed by Panel), Phase 6 (consumed by ComparisonRunner), Phase 8 (consumed by runner.py), Phase 9 (consumed by MCP tool). `AgentMessage.structured_output` typed as union covers Differential | NextTest | dict for the 4 agent types. `is_error` field added to FinalVerdict in Phase 5.1 and consumed in Phase 7.4.
 - [x] **Karpathy/router tips applied:**
   - Tip [1] plan mode → this doc IS the plan, written before any code touched.
   - Tip [2] vertical slice → Phase 3 vertical-slices TestChooser before Phase 4 parallelizes.
   - Tip [4] phase-wise gated testing → every phase has a gate.
+  - Tip [5] multi-Claude review → architect subagent reviewed the spec; 11 findings integrated, 7 documented as accepted/deferred.
   - Tip [6] small focused PRs → each task ends with its own commit (commits per task, not per phase).
   - Tip [9] /simplify, tip [10] /refactor-clean → Phase 1.4 and Phase 10 invoke both.
   - Tip [11] CLAUDE.md cap → Phase 10.1 verifies under 200 lines.
   - Tip [13] `<important if>` scopes → already applied in the updated `.claude/rules/no-orchestrator-logic.md`.
+- [x] **Architect-review findings tracked:** "Architect-review integration" section at top lists 18 findings with explicit integrated/documented/deferred status. Critical-correctness items (termination bug, ComparisonRunner robustness, Wilcoxon stats, is_error semantics, MCP cost guardrail) integrated inline into the relevant tasks.
 
 ---
 
