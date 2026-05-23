@@ -365,6 +365,18 @@ Runs against the full target corpora. Produces `data/results/<run_id>/` containi
 
 **Headline framing:** "Quorum reproduces MAI-DxO's architecture and evaluates on public clinical-case benchmarks. Direct numerical comparison to MAI-DxO's 85.5% on NEJM CPCs requires paywalled-corpus access and is listed as future work. We report Quorum's performance vs single-call baselines on public corpora; mixed-vendor vs single-model comparison is the headline ablation."
 
+### Eval Corpus Verification (Phase 0, 2026-05-23)
+
+Probed HuggingFace API for accessibility of the three candidate corpora. Results:
+
+| Corpus | HF dataset id | Gated? | Downloads | License/format |
+|--------|---------------|--------|-----------|----------------|
+| CUPCase | `ofir408/CUPCase` | No | 531 | MCQ + QA tags (loader will need to extract free-text case + diagnosis fields) |
+| MedQA | `bigbio/med_qa` | No | 3,529 | Multilingual EN/ZH, USMLE-style |
+| MedCaseReasoning | `zou-lab/MedCaseReasoning` | No | 827 | MIT, 10k-100k size, parquet format |
+
+All three usable for Phase 8 eval. CUPCase remains the primary (case-report format closest to NEJM CPCs); MedCaseReasoning is the strongest secondary (MIT license + explicit reasoning labels); MedQA as the fallback / saturation check.
+
 ## 11. Deliverables
 
 | Deliverable | Path | Owner |
