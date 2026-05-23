@@ -18,7 +18,11 @@
 
 A senior-architect subagent reviewed the spec and surfaced 18 findings (5 BLOCKER/MAJOR-tier on correctness, 8 MAJOR on planning, 5 MINOR/NIT). The plan below has been amended to address the correctness-critical items inline; the rest are documented here with explicit defer/accept decisions.
 
-**Integrated into plan tasks:**
+**User-added safety phase (Phase 1.5):**
+- **Cumulative spend gate.** New `_track_spend()` in `LLMClient` persists running cost to `~/.quorum/spend.json` and refuses calls past `QUORUM_TOTAL_SPEND_LIMIT_USD` (default `$15`). Soft warning at 67% of cap. Survives across processes, /goal turns, eval runs, MCP calls. Required active before any subsequent phase makes live LLM calls. See Phase 1.5.
+- **`dev_cheap.yaml` panel config.** Mid-tier models (Haiku 4.5 + Gemini Flash + GPT-4o-mini + Llama 3.3) for development, prompt iteration, and `/goal` autonomous mode. ~10–20× cheaper than `single_model_premium`. The final headline eval (Phase 10) is when you swap to the premium configs. See Phase 2 Task 2.3 Step 3.6.
+
+**Integrated into plan tasks (architect findings):**
 - **Termination-logic ordering bug.** Original spec computed `top_posterior > threshold` from the iteration-start Hypothesis output, short-circuiting before Checklist's `recommend_continue=false` could block consensus. Fix: termination check moved to end-of-iteration AND Checklist gets explicit veto on consensus. See Phase 5 Task 5.3.
 - **Parallelize independent agents.** Challenger and Stewardship don't depend on each other's outputs. Run them concurrently via `asyncio.gather`; ~20% wall-clock improvement per case. See Phase 5 Task 5.3.
 - **ComparisonRunner back-pressure trap.** Bounded queue (`maxsize=64`) + client-disconnect cancellation + uniqueness assert on panel_ids. See Phase 6 Task 6.2.
@@ -400,6 +404,180 @@ uv run python -c "from quorum.llm.client import LLMClient; c=LLMClient(); print(
 
 ---
 
+## Phase 1.5 — Cumulative spend gate (2 tasks, ~30 min) [HARD-GATE BEFORE LIVE LLM CALLS]
+
+User-added safety phase. Adds a process-survival cumulative-spend tracker to `LLMClient` that refuses new calls past `QUORUM_TOTAL_SPEND_LIMIT_USD` (default `$15`). This protects `/goal` autonomous runs from cost-overrun by halting cleanly with a useful error message. Combined with an OpenRouter dashboard per-key monthly limit as backstop.
+
+**No phase past Phase 1.5 may issue a live LLM call until the spend gate is verified active by the gate command at the end of this phase.**
+
+### Task 1.5.1: Add cumulative-spend tracker to LLMClient
+
+**Files:**
+- Modify: `backend/src/quorum/llm/client.py`
+- Modify: `backend/tests/test_llm_client.py` (append tests)
+
+- [ ] **Step 1: Write failing test**
+
+Append to `backend/tests/test_llm_client.py`:
+```python
+import tempfile, pathlib
+from unittest.mock import patch
+
+
+@pytest.mark.asyncio
+async def test_complete_writes_to_spend_file_and_blocks_at_cap(monkeypatch, tmp_path):
+    """Cumulative spend file is updated; cap raises before exceeding."""
+    spend_file = tmp_path / "spend.json"
+    monkeypatch.setattr("quorum.llm.client._SPEND_FILE", spend_file)
+    monkeypatch.setenv("QUORUM_TOTAL_SPEND_LIMIT_USD", "0.005")  # tiny cap
+
+    fake_resp = type("R", (), {
+        "choices": [type("C", (), {"message": type("M", (), {"content": "ok"})()})()],
+        "usage": type("U", (), {"prompt_tokens": 10, "completion_tokens": 5,
+                                  "total_tokens": 15, "cost": 0.003})(),
+        "model": "anthropic/claude-haiku-4-5",
+    })
+
+    with patch("quorum.llm.client.AsyncOpenAI") as mock_cls:
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=fake_resp)
+        mock_cls.return_value = mock_client
+
+        client = LLMClient()
+        # First call: 0.003 -> under 0.005 cap, succeeds
+        await client.complete(messages=[{"role":"user","content":"a"}])
+        data = json.loads(spend_file.read_text())
+        assert data["total"] == pytest.approx(0.003)
+
+        # Second call: would push to 0.006 -> over 0.005 cap, raises
+        with pytest.raises(RuntimeError, match="spend cap"):
+            await client.complete(messages=[{"role":"user","content":"b"}])
+```
+
+Run: `cd backend && uv run pytest tests/test_llm_client.py -k spend -v`
+Expected: fails — spend tracker not implemented yet.
+
+- [ ] **Step 2: Add spend tracker to client.py**
+
+In `backend/src/quorum/llm/client.py`, near the top imports:
+```python
+import json, pathlib, sys
+from datetime import datetime
+```
+
+Add module-level constants:
+```python
+_SPEND_FILE = pathlib.Path.home() / ".quorum" / "spend.json"
+```
+
+Add helper function (above the `LLMClient` class):
+```python
+def _track_spend(cost_usd: float) -> None:
+    """Persist cumulative spend; raise if over cap, warn at 67% of cap."""
+    cap = float(os.environ.get("QUORUM_TOTAL_SPEND_LIMIT_USD", "999"))
+    _SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if _SPEND_FILE.exists():
+        data = json.loads(_SPEND_FILE.read_text())
+    else:
+        data = {"total": 0.0, "since": datetime.utcnow().isoformat()}
+    data["total"] = float(data.get("total", 0.0)) + float(cost_usd)
+    _SPEND_FILE.write_text(json.dumps(data, indent=2))
+    if data["total"] >= cap:
+        raise RuntimeError(
+            f"Hit cumulative spend cap ${cap:.2f} (now ${data['total']:.4f}). "
+            f"Reset: rm {_SPEND_FILE}"
+        )
+    soft = 0.67 * cap
+    if data["total"] >= soft:
+        print(
+            f"⚠ Spend alert: ${data['total']:.2f} of ${cap:.2f} "
+            f"({100*data['total']/cap:.0f}%)",
+            file=sys.stderr,
+        )
+```
+
+In `LLMClient.complete()`, AFTER computing `cost` and BEFORE returning the `LLMResponse`, add:
+```python
+_track_spend(cost)
+```
+
+Apply the same call in `LLMClient.stream()` if you can extract per-stream cost; otherwise document that streaming bypasses the cumulative tracker and the architecture currently calls `complete()` for all agent work (streaming is unused in the vertical slice).
+
+- [ ] **Step 3: Run test, confirm pass**
+
+Run: `cd backend && uv run pytest tests/test_llm_client.py -v`
+Expected: all pass, including the new spend-cap test.
+
+- [ ] **Step 4: Document in .env.example**
+
+Append to `.env.example`:
+```bash
+# Cumulative spend cap across ALL LLM calls (agents, eval, MCP, smoke tests).
+# Tracked in ~/.quorum/spend.json. LLMClient refuses new calls past this cap
+# with a RuntimeError that halts /goal cleanly. Reset by deleting the file.
+QUORUM_TOTAL_SPEND_LIMIT_USD=15
+```
+
+Also append to your local `.env` (uncomment and set; default of $15 is recommended).
+
+### Task 1.5.2: Verify the gate from the shell
+
+- [ ] **Step 1: Reset spend file**
+
+```bash
+rm -f ~/.quorum/spend.json
+```
+
+- [ ] **Step 2: Set a tiny cap and confirm it triggers**
+
+```bash
+cd backend && QUORUM_TOTAL_SPEND_LIMIT_USD=0.001 uv run python -c "
+import asyncio
+from quorum.llm.client import LLMClient
+
+async def main():
+    llm = LLMClient(default_model='anthropic/claude-haiku-4-5')
+    try:
+        await llm.complete(messages=[{'role':'user','content':'pong'}])
+        await llm.complete(messages=[{'role':'user','content':'pong'}])
+    except RuntimeError as e:
+        print('GATE FIRED:', e)
+asyncio.run(main())
+"
+```
+Expected: `GATE FIRED: Hit cumulative spend cap $0.00 (now $0.0...). Reset: rm /Users/.../.quorum/spend.json`
+
+- [ ] **Step 3: Reset and set real cap**
+
+```bash
+rm -f ~/.quorum/spend.json
+# Confirm .env has QUORUM_TOTAL_SPEND_LIMIT_USD=15
+grep QUORUM_TOTAL_SPEND_LIMIT_USD .env
+```
+
+- [ ] **Step 4: Commit Phase 1.5**
+
+```bash
+git add backend/src/quorum/llm/client.py backend/tests/test_llm_client.py .env.example
+git commit -m "feat(safety): cumulative LLM spend cap with QUORUM_TOTAL_SPEND_LIMIT_USD env var"
+```
+
+### Phase 1.5 Gate
+
+```bash
+# Test passes (spend cap enforced):
+cd backend && uv run pytest tests/test_llm_client.py -k spend -v
+# → green
+
+# Smoke confirms real-world behavior matches:
+ls ~/.quorum/spend.json && cat ~/.quorum/spend.json
+# → file exists with {"total": ..., "since": ...}
+```
+
+After this gate is green, all subsequent phases inherit the spend cap automatically — every `LLMClient.complete()` call goes through `_track_spend`. **You may not skip this phase. /goal autonomous mode depends on this gate being active.**
+
+---
+
 ## Phase 2 — PanelConfig YAML system (3 tasks, ~half day)
 
 ### Task 2.1: Failing test for `PanelConfig.from_yaml()`
@@ -572,7 +750,25 @@ hypothesis:    { model: "anthropic/claude-opus-4", temperature: 0.0 }
 
 The Panel must skip any agent whose slot is None — implement this in Phase 5 Task 5.3.
 
-- [ ] **Step 4: Add test that all three configs load + listing works**
+- [ ] **Step 3.6: Write `dev_cheap.yaml` (default for autonomous runs)**
+
+This is the panel used by /goal autonomous execution, all prompt-iteration work, and any debugging. Mirrors mixed_vendor's diversity structure but with ~10–20× cheaper model variants. All five models are used in published medical AI papers, capable of producing schema-valid structured JSON, but cost cents instead of dollars per case.
+
+```yaml
+name: dev_cheap
+description: Mid-tier models for development, debugging, /goal loops. Mirrors mixed_vendor's diversity structure at ~10-20x lower cost. SWAP TO single_model_premium OR mixed_vendor FOR FINAL HEADLINE EVAL.
+max_iterations: 3
+consensus_threshold: 0.6
+hypothesis:    { model: "anthropic/claude-haiku-4-5",        temperature: 0.0 }
+test_chooser:  { model: "google/gemini-2.5-flash",           temperature: 0.0 }
+challenger:    { model: "openai/gpt-4o-mini",                temperature: 0.0 }
+stewardship:   { model: "anthropic/claude-haiku-4-5",        temperature: 0.0 }
+checklist:     { model: "meta-llama/llama-3.3-70b-instruct", temperature: 0.0 }
+```
+
+Estimated cost per 100-case eval: ~$1.50. Estimated cost across the full 13.5-day build (autonomous mode): ~$2-5.
+
+- [ ] **Step 4: Add test that all four configs load + listing works**
 
 In `backend/tests/test_panel_config.py`, append:
 ```python
@@ -582,6 +778,7 @@ def test_reference_configs_load():
     assert "single_model_premium" in names
     assert "mixed_vendor" in names
     assert "baseline_single_call" in names
+    assert "dev_cheap" in names
 
 def test_baseline_has_only_hypothesis():
     baseline = next(c for c in PanelConfig.list_available() if c.name == "baseline_single_call")
@@ -2259,7 +2456,20 @@ Populate the existing skeleton with:
 **Files:**
 - Create: `docs/results.md`
 
-Run an eval (100 cases) on each panel; populate `results.md` with headline numbers, comparison table with significance markers, per-corpus breakdown, cost breakdown.
+**Before running:** verify `~/.quorum/spend.json` shows current total comfortably below `QUORUM_TOTAL_SPEND_LIMIT_USD` so the headline eval can complete. If close to the cap, either bump the cap explicitly for this final run (`QUORUM_TOTAL_SPEND_LIMIT_USD=40`) or reset the file if you trust your running total (`rm ~/.quorum/spend.json`).
+
+**Model swap for headline numbers:** all development work + /goal autonomous runs used `dev_cheap` for cost reasons. For the headline `results.md`:
+```bash
+# Premium single-model run
+quorum-eval run --corpus cupcase --panel single_model_premium --n 100
+# Premium mixed-vendor run
+quorum-eval run --corpus cupcase --panel mixed_vendor --n 100
+# Baseline (zero-shot, one Hypothesis call)
+quorum-eval run --corpus cupcase --panel baseline_single_call --n 100
+# Comparison report
+quorum-eval compare --corpus cupcase --panels mixed_vendor,single_model_premium --n 100
+```
+Then populate `results.md` with headline numbers (top-1, top-5, MRR, cost) for all four panels in one table, McNemar/Wilcoxon p-values for the mixed-vs-single comparison, per-case breakdown for the most interesting failures, and a baseline-comparison row. Approximate total cost for this headline run: ~$30-50 across all four panels. Set `QUORUM_TOTAL_SPEND_LIMIT_USD` accordingly before invoking.
 
 ### Task 10.4: Write `docs/roadmap.md` (Approach C)
 
