@@ -13,6 +13,7 @@ from quorum.api.schemas import (
 )
 from quorum.api.streaming import stream_event_to_sse
 from quorum.llm.client import LLMClient
+from quorum.orchestrator.comparison_runner import ComparisonRunner
 from quorum.orchestrator.panel import Panel
 from quorum.orchestrator.panel_config import PanelConfig
 from quorum.orchestrator.schemas import CaseInput
@@ -93,6 +94,63 @@ async def diagnose_stream(
 
     async def event_generator():
         async for event in panel.diagnose_stream(case):
+            yield stream_event_to_sse(event)
+
+    return EventSourceResponse(event_generator())
+
+
+def _resolve_compare_configs(panels_csv: str) -> list[PanelConfig]:
+    """Parse a comma-separated `panels` query value into two PanelConfigs.
+
+    Raises HTTPException(422) on wrong count, HTTPException(404) on unknown
+    name. Returns the two configs in the requested order.
+    """
+    panel_names = [p.strip() for p in panels_csv.split(",") if p.strip()]
+    if len(panel_names) != 2:
+        raise HTTPException(
+            status_code=422,
+            detail="`panels` must list exactly two comma-separated panel names",
+        )
+    available = {c.name: c for c in PanelConfig.list_available()}
+    configs: list[PanelConfig] = []
+    for n in panel_names:
+        if n not in available:
+            raise HTTPException(
+                status_code=404,
+                detail=f"unknown panel '{n}'; available: {sorted(available)}",
+            )
+        configs.append(available[n])
+    if configs[0].name == configs[1].name:
+        raise HTTPException(
+            status_code=422,
+            detail="`panels` must list two distinct panel names",
+        )
+    return configs
+
+
+@router.get("/compare/stream")
+async def compare_stream(
+    presentation: Annotated[str, Query(max_length=_PRESENTATION_MAX_LENGTH)],
+    panels: Annotated[str, Query(max_length=256)],
+    case_id: Annotated[str | None, Query(max_length=256)] = None,
+) -> EventSourceResponse:
+    """SSE-streamed two-panel comparison.
+
+    Query params:
+      - presentation: case presentation text (required).
+      - panels: two comma-separated PanelConfig names (e.g.
+        "mixed_vendor,single_model_premium").
+      - case_id: optional case identifier echoed in the verdict.
+
+    Every emitted event has `panel_id` injected into its data dict so the
+    frontend can route events to the correct side-by-side column.
+    """
+    configs = _resolve_compare_configs(panels)
+    runner = ComparisonRunner(configs, LLMClient())
+    case = CaseInput(presentation=presentation, case_id=case_id)
+
+    async def event_generator():
+        async for event in runner.compare_stream(case):
             yield stream_event_to_sse(event)
 
     return EventSourceResponse(event_generator())
