@@ -1,8 +1,8 @@
 """Unified LLM client routed through OpenRouter (OpenAI-SDK-compatible)."""
 from __future__ import annotations
 
-import os
 import json
+import os
 import pathlib
 import sys
 from collections.abc import AsyncIterator
@@ -10,7 +10,6 @@ from datetime import datetime
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-
 
 _SPEND_FILE = pathlib.Path.home() / ".quorum" / "spend.json"
 
@@ -43,6 +42,54 @@ def _track_spend(cost_usd: float) -> None:
             f"({100 * data['total'] / cap:.0f}%)",
             file=sys.stderr,
         )
+
+
+_JSON_FENCE_PREFIXES = ("```json", "```JSON", "```")
+
+
+def _strip_json_fence(content: str) -> str:
+    """Strip ```json ... ``` markdown fences some models wrap JSON in.
+
+    Anthropic models routed through OpenRouter often wrap structured output
+    in triple-backtick fences even when response_format={"type":"json_object"}
+    is set, because Anthropic's API doesn't natively support OpenAI-style JSON
+    mode. Stripping defensively here lets every agent's json.loads succeed.
+    """
+    s = content.strip()
+    if not s.startswith("```"):
+        return content
+    for prefix in _JSON_FENCE_PREFIXES:
+        if s.startswith(prefix):
+            s = s[len(prefix):]
+            break
+    s = s.lstrip("\n")
+    if s.endswith("```"):
+        s = s[: -len("```")]
+    return s.strip()
+
+
+def _normalize_json_content(content: str) -> str:
+    """Normalize LLM JSON output: strip markdown fence + take first JSON value.
+
+    Some models return a JSON object followed by prose commentary even when
+    asked for JSON only. json.loads raises "Extra data" on that. Using
+    raw_decode extracts just the leading JSON value and discards trailing
+    commentary, so each agent's downstream json.loads succeeds cleanly.
+
+    If the content does not begin with a JSON value, returns it unchanged so
+    the agent's error path can surface the malformed-output failure normally.
+    """
+    s = _strip_json_fence(content)
+    s = s.lstrip()
+    if not s:
+        return s
+    if s[0] not in "{[":
+        return s
+    try:
+        value, _end = json.JSONDecoder().raw_decode(s)
+    except json.JSONDecodeError:
+        return s
+    return json.dumps(value)
 
 
 class LLMResponse(BaseModel):
@@ -103,8 +150,11 @@ class LLMClient:
         usage = r.usage
         cost = getattr(usage, "cost", 0.0) or 0.0
         _track_spend(cost)
+        raw_content = r.choices[0].message.content or ""
+        if response_format and response_format.get("type") == "json_object":
+            raw_content = _normalize_json_content(raw_content)
         return LLMResponse(
-            content=r.choices[0].message.content or "",
+            content=raw_content,
             tokens_used=getattr(usage, "total_tokens", 0) or 0,
             cost_usd=float(cost),
             model=r.model,
