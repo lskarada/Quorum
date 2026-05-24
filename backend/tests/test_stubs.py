@@ -8,10 +8,6 @@ test_<module>.py file. Don't just delete it.
 """
 from __future__ import annotations
 
-import asyncio
-
-import pytest
-
 # HypothesisAgent's NotImplementedError contract moved to test_agents.py once
 # its deliberate() was implemented in the vertical-slice phase.
 # TestChooserAgent's NotImplementedError contract moved to test_agents.py once
@@ -26,11 +22,8 @@ import pytest
 # once the OpenRouter-routed implementation landed.
 
 
-def test_mcp_diagnose_case_tool_raises_not_implemented():
-    from quorum.mcp_server.tools import diagnose_case_tool
-
-    with pytest.raises(NotImplementedError):
-        asyncio.run(diagnose_case_tool({"presentation": "x"}))
+# diagnose_case_tool NotImplementedError contract moved to test_mcp_tools.py
+# once the MCP stdio server landed in Phase 9.
 
 
 # eval.corpus.load_corpus was deleted in Phase 8: replaced by load_medqa /
