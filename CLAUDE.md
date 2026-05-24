@@ -73,6 +73,14 @@ cd backend && uv run python scripts/dump_schemas.py
 
 # Full acceptance (mirrors README §8)
 cd backend && uv run pytest tests/test_acceptance.py -q
+
+# Run eval (~$0.05 for 3 cases with dev_cheap, $5-10 for 100 cases with premium)
+cd backend && uv run quorum-eval run --corpus medqa --panel dev_cheap --n 3
+cd backend && uv run quorum-eval score <results_dir> --corpus medqa
+cd backend && uv run quorum-eval report <results_dir> --corpus medqa
+
+# MCP server (stdio)
+cd backend && uv run python -m quorum.mcp_server.server
 ```
 
 ## Repository topology
@@ -125,11 +133,15 @@ When working in this repo, especially as a subagent:
 | Phase | Status |
 |-------|--------|
 | Scaffolding | Complete |
-| Vertical slice (Hypothesis + Panel + SSE + frontend transcript) | In progress — see `docs/IMPLEMENTATION_PLAN.md` |
-| Remaining 4 agents (TestChooser/Challenger/Stewardship/Checklist) | Not started — stubs intact |
-| Multi-agent consensus loop | Not started |
-| Prompt engineering | Not started |
-| Eval corpus curation | Not started |
+| Vertical slice (Hypothesis + Panel + SSE + frontend transcript) | Complete |
+| Five agents (Hypothesis/TestChooser/Challenger/Stewardship/Checklist) | Complete |
+| Multi-agent consensus loop (3 termination paths, parallel Challenger\|\|Stewardship) | Complete |
+| YAML panel configs (dev_cheap, single_model_premium, mixed_vendor, baseline_single_call) | Complete |
+| Compare runner + /api/compare/stream | Complete |
+| Polished frontend (multi-iter transcript + /compare route) | Complete |
+| Eval harness (corpus loaders, runner, scorer with McNemar+Wilcoxon, CLI) | Complete |
+| MCP stdio server (diagnose_case tool) | Complete |
+| Headline eval with premium panels | Pending (out of /goal autonomous scope) |
 | Demo video | Not started |
 
 See `docs/milestone.md` for the CS153 Week 7 deliverable.
