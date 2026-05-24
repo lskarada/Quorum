@@ -440,3 +440,32 @@ async def test_test_chooser_malformed_json_raises(test_chooser, mock_llm, base_c
     )
     with pytest.raises((ValueError, json.JSONDecodeError)):
         await test_chooser.deliberate(base_case, [], 0)
+
+
+# ============================================================
+# ChallengerAgent
+# ============================================================
+
+
+@pytest.fixture
+def challenger(mock_llm):
+    from quorum.orchestrator.agents.challenger import ChallengerAgent
+    return ChallengerAgent(mock_llm)
+
+
+_CHALLENGE_JSON = json.dumps({
+    "against_top_candidate": ["Onset was acute, not insidious", "No fever"],
+    "alternative_to_consider": "Transient ischemic attack",
+    "confidence_in_challenge": 0.7,
+})
+
+
+@pytest.mark.asyncio
+async def test_challenger_happy_path(challenger, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_CHALLENGE_JSON, tokens_used=200, cost_usd=0.002, model="x",
+    )
+    msg = await challenger.deliberate(base_case, [], 0)
+    assert msg.role.value == "challenger"
+    assert msg.structured_output["alternative_to_consider"] == "Transient ischemic attack"
+    assert msg.structured_output["confidence_in_challenge"] == 0.7
