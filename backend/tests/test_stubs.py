@@ -12,36 +12,11 @@ import asyncio
 
 import pytest
 
-from quorum.llm.client import LLMClient
-from quorum.orchestrator.agents import (
-    ChallengerAgent,
-    ChecklistAgent,
-    StewardshipAgent,
-)
-from quorum.orchestrator.schemas import CaseInput
-
 # HypothesisAgent's NotImplementedError contract moved to test_agents.py once
 # its deliberate() was implemented in the vertical-slice phase.
 # TestChooserAgent's NotImplementedError contract moved to test_agents.py once
 # its deliberate() was implemented in Phase 3.
-
-
-def _case() -> CaseInput:
-    return CaseInput(presentation="placeholder", max_iterations=1)
-
-
-@pytest.mark.parametrize(
-    "AgentCls",
-    [ChallengerAgent, ChecklistAgent, StewardshipAgent],
-)
-def test_agent_deliberate_raises_not_implemented(AgentCls):
-    # Bypass __init__ so we don't need OPENROUTER_API_KEY for a stub-only test
-    # (matches the LLMClient.__new__ pattern used in test_agents/test_panel).
-    llm = LLMClient.__new__(LLMClient)
-    llm.default_model = "anthropic/claude-opus-4"
-    agent = AgentCls(llm)
-    with pytest.raises(NotImplementedError):
-        asyncio.run(agent.deliberate(_case(), [], 0))
+# All four optional-agent stubs implemented; see test_agents.py for per-agent contracts.
 
 
 # Panel.diagnose NotImplementedError contract moved to test_panel.py once
