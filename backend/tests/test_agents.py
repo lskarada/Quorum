@@ -518,3 +518,46 @@ async def test_stewardship_rejects_with_alternative(stewardship, mock_llm, base_
     msg = await stewardship.deliberate(base_case, [], 0)
     assert msg.structured_output["accept_test"] is False
     assert msg.structured_output["cheaper_alternative"]["estimated_cost_usd"] == 150.0
+
+
+# ============================================================
+# ChecklistAgent
+# ============================================================
+
+
+@pytest.fixture
+def checklist(mock_llm):
+    from quorum.orchestrator.agents.checklist import ChecklistAgent
+    return ChecklistAgent(mock_llm)
+
+
+_CHK_JSON_CLEAN = json.dumps({
+    "consistent": True, "flags": [], "recommend_continue": True,
+})
+
+_CHK_JSON_CONTRADICTION = json.dumps({
+    "consistent": False,
+    "flags": ["Hypothesis cites fever as evidence; case states T=98.6F"],
+    "recommend_continue": False,
+})
+
+
+@pytest.mark.asyncio
+async def test_checklist_clean(checklist, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_CHK_JSON_CLEAN, tokens_used=80, cost_usd=0.0008, model="x",
+    )
+    msg = await checklist.deliberate(base_case, [], 0)
+    assert msg.structured_output["consistent"] is True
+    assert msg.structured_output["recommend_continue"] is True
+
+
+@pytest.mark.asyncio
+async def test_checklist_flags_contradiction(checklist, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_CHK_JSON_CONTRADICTION, tokens_used=120, cost_usd=0.0012, model="x",
+    )
+    msg = await checklist.deliberate(base_case, [], 0)
+    assert msg.structured_output["consistent"] is False
+    assert len(msg.structured_output["flags"]) >= 1
+    assert msg.structured_output["recommend_continue"] is False
