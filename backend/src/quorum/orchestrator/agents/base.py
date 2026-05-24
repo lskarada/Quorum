@@ -22,8 +22,9 @@ class Agent(ABC):
 
     role: AgentRole
 
-    def __init__(self, llm: LLMClient):
+    def __init__(self, llm: LLMClient, model: str | None = None):
         self.llm = llm
+        self.model = model  # None → llm.default_model is used by self.llm.complete
         self._prompt_template: str | None = None
 
     @property

@@ -43,6 +43,7 @@ class HypothesisAgent(Agent):
         messages = self._build_messages(case, transcript, iteration)
         response = await self.llm.complete(
             messages=messages,
+            model=self.model,
             response_format={"type": "json_object"},
         )
 

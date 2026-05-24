@@ -38,6 +38,7 @@ class StewardshipAgent(Agent):
         ]
         resp = await self.llm.complete(
             messages=messages,
+            model=self.model,
             response_format={"type": "json_object"},
             max_tokens=2048,
         )
