@@ -1,0 +1,42 @@
+[
+  {
+    "case_id": "cup_synth_001",
+    "presentation": "A 58-year-old man with a 30 pack-year smoking history presents with 3 months of progressive dyspnea on exertion, dry cough, and a 15-pound weight loss. He reports occasional hemoptysis over the last 2 weeks. Exam reveals clubbing and decreased breath sounds in the right upper lobe. CT chest shows a 4 cm spiculated mass in the right upper lobe with mediastinal lymphadenopathy.",
+    "final_diagnosis": "Non-small cell lung cancer"
+  },
+  {
+    "case_id": "cup_synth_002",
+    "presentation": "A 24-year-old woman presents with 6 weeks of fatigue, polyuria, polydipsia, and a 12-pound unintentional weight loss. She reports blurred vision. Labs reveal fasting glucose 312 mg/dL, HbA1c 11.2%, and positive GAD-65 antibodies. Urinalysis is positive for ketones.",
+    "final_diagnosis": "Type 1 diabetes mellitus"
+  },
+  {
+    "case_id": "cup_synth_003",
+    "presentation": "A 67-year-old woman presents with 4 weeks of progressive proximal muscle weakness, difficulty rising from a chair, and dysphagia. Skin exam shows a violaceous heliotrope rash on the upper eyelids and Gottron papules over the MCP joints. Serum CK is 4,200 U/L; anti-Mi-2 antibodies are positive.",
+    "final_diagnosis": "Dermatomyositis"
+  },
+  {
+    "case_id": "cup_synth_004",
+    "presentation": "A 32-year-old previously healthy man presents to the ED with sudden severe headache described as the worst of his life, photophobia, and brief loss of consciousness. He has nuchal rigidity on exam. Non-contrast head CT shows hyperdense blood in the basal cisterns and sylvian fissures.",
+    "final_diagnosis": "Subarachnoid hemorrhage"
+  },
+  {
+    "case_id": "cup_synth_005",
+    "presentation": "A 52-year-old man presents with 2 months of upper abdominal pain radiating to the back, 20-pound weight loss, and new-onset jaundice. Exam reveals scleral icterus and a palpable non-tender gallbladder. Total bilirubin is 8.6 mg/dL (direct predominant); CA 19-9 is markedly elevated. CT abdomen demonstrates a 3.5 cm mass in the pancreatic head with biliary ductal dilation.",
+    "final_diagnosis": "Pancreatic adenocarcinoma"
+  },
+  {
+    "case_id": "cup_synth_006",
+    "presentation": "A 19-year-old college student presents with one week of fever, sore throat, marked fatigue, and bilateral posterior cervical lymphadenopathy. Exam reveals exudative pharyngitis and splenomegaly. CBC shows lymphocytosis with atypical lymphocytes. Monospot test is positive.",
+    "final_diagnosis": "Infectious mononucleosis"
+  },
+  {
+    "case_id": "cup_synth_007",
+    "presentation": "A 45-year-old woman presents with 3 months of fatigue, pruritus, and right upper quadrant discomfort. Exam reveals xanthelasma and mild hepatomegaly. Labs show alkaline phosphatase 580 U/L, mildly elevated ALT/AST, and positive anti-mitochondrial antibodies. Liver biopsy demonstrates non-suppurative destructive cholangitis.",
+    "final_diagnosis": "Primary biliary cholangitis"
+  },
+  {
+    "case_id": "cup_synth_008",
+    "presentation": "A 38-year-old woman presents with 4 weeks of intermittent palpitations, episodic headaches, and diaphoresis. BP fluctuates between 160/100 and 220/130 in clinic. 24-hour urine metanephrines are 5x the upper limit of normal. Abdominal MRI shows a 4 cm right adrenal mass with high T2 signal intensity.",
+    "final_diagnosis": "Pheochromocytoma"
+  }
+]

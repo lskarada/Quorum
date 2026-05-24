@@ -43,6 +43,7 @@ data/cases/nejm/*.json
 data/cases/medqa/*.json
 !data/cases/**/_schema.json
 data/results/*.json
+data/results/*/
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep

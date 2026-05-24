@@ -33,11 +33,8 @@ def test_mcp_diagnose_case_tool_raises_not_implemented():
         asyncio.run(diagnose_case_tool({"presentation": "x"}))
 
 
-def test_eval_corpus_loader_raises_not_implemented():
-    from quorum.eval.corpus import load_corpus
-
-    with pytest.raises(NotImplementedError):
-        next(load_corpus("nejm"))
+# eval.corpus.load_corpus was deleted in Phase 8: replaced by load_medqa /
+# load_cupcase / load_ground_truth. Contract tests moved to test_eval_corpus.py.
 
 
 # stream_event_to_sse NotImplementedError contract moved to test_api_diagnose.py
