@@ -24,7 +24,7 @@ _REPO_ROOT_ENV = pathlib.Path(__file__).resolve().parents[4] / ".env"
 if _REPO_ROOT_ENV.exists():
     load_dotenv(_REPO_ROOT_ENV)
 
-from quorum.eval.corpus import load_cupcase, load_ground_truth, load_medqa  # noqa: E402
+from quorum.eval.corpus import load_cupcase, load_ground_truth, load_mcr, load_medqa  # noqa: E402
 from quorum.eval.report import build_report  # noqa: E402
 from quorum.eval.runner import run_eval  # noqa: E402
 from quorum.eval.scorer import compare_runs, score_run  # noqa: E402
@@ -32,7 +32,7 @@ from quorum.orchestrator.panel_config import PanelConfig  # noqa: E402
 
 app = typer.Typer(add_completion=False, help="Quorum eval harness CLI.")
 
-_LOADERS = {"cupcase": load_cupcase, "medqa": load_medqa}
+_LOADERS = {"cupcase": load_cupcase, "medqa": load_medqa, "mcr": load_mcr}
 _DEFAULT_CASES_ROOT = pathlib.Path("data/cases")
 _DEFAULT_RESULTS_ROOT = pathlib.Path("data/results")
 

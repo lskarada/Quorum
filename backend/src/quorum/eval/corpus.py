@@ -47,6 +47,19 @@ def load_cupcase(path: pathlib.Path) -> Iterator[CaseInput]:
         yield CaseInput(case_id=case_id, presentation=entry["presentation"])
 
 
+def load_mcr(path: pathlib.Path) -> Iterator[CaseInput]:
+    """Yield CaseInputs from a MedCaseReasoning-style JSON file.
+
+    Same shape as cupcase: {case_id, presentation, final_diagnosis}.
+    MCR additionally carries a `reasoning` field that we don't pass to the
+    panel (ground truth only).
+    """
+    data = json.loads(pathlib.Path(path).read_text())
+    for i, entry in enumerate(data):
+        case_id = entry.get("case_id") or entry.get("id") or f"mcr_{i:04d}"
+        yield CaseInput(case_id=case_id, presentation=entry["presentation"])
+
+
 def load_ground_truth(path: pathlib.Path) -> dict[str, str]:
     """Return {case_id: ground_truth_diagnosis}.
 
