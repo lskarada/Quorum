@@ -14,9 +14,12 @@ export default function Home() {
           Five specialist agents deliberate on a clinical case. Watch the debate, see the
           ranked differential, get a cited next-test recommendation.
         </p>
-        <div className="pt-4">
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
             <Link to="/diagnose">Try the demo</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link to="/compare">Compare panels</Link>
           </Button>
         </div>
       </div>

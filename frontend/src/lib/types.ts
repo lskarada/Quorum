@@ -101,16 +101,19 @@ export interface ErrorPayload {
   http_status: number | null;
 }
 
-// SSE event discriminated union — mirrors backend StreamEvent. Only the
-// variants emitted in the vertical slice + Phase 3 test_chooser are typed
-// here; agent_token / round_complete will be added when streaming +
-// multi-iter land.
+// SSE event discriminated union — mirrors backend StreamEvent.
+//
+// Every event variant's `data` carries an optional `panel_id` so the
+// /compare/stream endpoint (which multiplexes events from two panels
+// against the same case) can be routed client-side to the correct column.
+// Single-panel /diagnose/stream omits it.
 export interface AgentCompleteHypothesisData {
   agent: "hypothesis";
   differential: Differential;
   tokens_used: number;
   cost_usd: number;
   latency_ms: number;
+  panel_id?: string;
 }
 
 export interface AgentCompleteTestChooserData {
@@ -119,14 +122,37 @@ export interface AgentCompleteTestChooserData {
   tokens_used: number;
   cost_usd: number;
   latency_ms: number;
+  panel_id?: string;
+}
+
+// Challenger/Stewardship/Checklist emit structured payloads whose exact
+// shape is still being iterated on the backend. We accept an opaque
+// structured_output so the frontend can render a generic agent card while
+// the schemas settle.
+export interface AgentCompleteGenericData {
+  agent: "challenger" | "stewardship" | "checklist";
+  structured_output?: Record<string, unknown>;
+  content?: string;
+  tokens_used: number;
+  cost_usd: number;
+  latency_ms: number;
+  panel_id?: string;
 }
 
 export type AgentCompleteData =
   | AgentCompleteHypothesisData
-  | AgentCompleteTestChooserData;
+  | AgentCompleteTestChooserData
+  | AgentCompleteGenericData;
 
 export type StreamEvent =
-  | { event: "agent_start"; data: { agent: AgentRole; iteration: number } }
+  | {
+      event: "agent_start";
+      data: { agent: AgentRole; iteration: number; panel_id?: string };
+    }
   | { event: "agent_complete"; data: AgentCompleteData }
-  | { event: "verdict"; data: FinalVerdict }
-  | { event: "error"; data: ErrorPayload };
+  | {
+      event: "round_complete";
+      data: { iteration: number; panel_id?: string };
+    }
+  | { event: "verdict"; data: FinalVerdict & { panel_id?: string } }
+  | { event: "error"; data: ErrorPayload & { panel_id?: string } };

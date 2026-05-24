@@ -1,26 +1,31 @@
 import { useEffect, useRef, useState } from "react";
+import { AgentCard } from "@/components/agent-card";
 import { CaseInput } from "@/components/case-input";
-import { DebateView } from "@/components/debate-view";
 import { DifferentialTable } from "@/components/differential-table";
 import { CitationPanel } from "@/components/citation-panel";
 import { NextTestCard } from "@/components/next-test-card";
 import { ConfidenceMeter } from "@/components/confidence-meter";
+import { IterationDivider } from "@/components/iteration-divider";
 import { streamDiagnosis } from "@/lib/sse";
 import type {
   AgentCompleteData,
   AgentCompleteHypothesisData,
   AgentCompleteTestChooserData,
+  AgentCompleteGenericData,
   AgentMessage,
   ErrorPayload,
   FinalVerdict,
   NextTest,
 } from "@/lib/types";
 
-function hypothesisMessage(data: AgentCompleteHypothesisData): AgentMessage {
+function hypothesisMessage(
+  data: AgentCompleteHypothesisData,
+  iteration: number,
+): AgentMessage {
   const top = data.differential.candidates[0]?.name ?? "(empty)";
   return {
     role: data.agent,
-    iteration: data.differential.iteration,
+    iteration,
     content: `Differential proposed. Top candidate: ${top} (${data.differential.candidates.length} total).`,
     structured_output: data.differential,
     citations: [],
@@ -30,10 +35,13 @@ function hypothesisMessage(data: AgentCompleteHypothesisData): AgentMessage {
   };
 }
 
-function testChooserMessage(data: AgentCompleteTestChooserData): AgentMessage {
+function testChooserMessage(
+  data: AgentCompleteTestChooserData,
+  iteration: number,
+): AgentMessage {
   return {
     role: data.agent,
-    iteration: 0,
+    iteration,
     content: `Recommend: ${data.next_test.name} — ${data.next_test.rationale}`,
     structured_output: data.next_test,
     citations: [],
@@ -43,13 +51,45 @@ function testChooserMessage(data: AgentCompleteTestChooserData): AgentMessage {
   };
 }
 
-function messageFromAgentComplete(data: AgentCompleteData): AgentMessage {
-  if (data.agent === "test_chooser") return testChooserMessage(data);
-  return hypothesisMessage(data);
+function genericAgentMessage(
+  data: AgentCompleteGenericData,
+  iteration: number,
+): AgentMessage {
+  const fallback =
+    data.agent === "challenger"
+      ? "Challenger reviewed the differential."
+      : data.agent === "stewardship"
+        ? "Stewardship reviewed cost and budget."
+        : "Checklist evaluated readiness to stop.";
+  return {
+    role: data.agent,
+    iteration,
+    content: data.content ?? fallback,
+    structured_output: data.structured_output,
+    citations: [],
+    timestamp: new Date().toISOString(),
+    tokens_used: data.tokens_used,
+    cost_usd: data.cost_usd,
+  };
+}
+
+function messageFromAgentComplete(
+  data: AgentCompleteData,
+  iteration: number,
+): AgentMessage {
+  if (data.agent === "hypothesis") return hypothesisMessage(data, iteration);
+  if (data.agent === "test_chooser") return testChooserMessage(data, iteration);
+  return genericAgentMessage(data, iteration);
+}
+
+interface IterationData {
+  iteration: number;
+  messages: AgentMessage[];
+  complete: boolean;
 }
 
 export default function Diagnose() {
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [iterations, setIterations] = useState<IterationData[]>([]);
   const [verdict, setVerdict] = useState<FinalVerdict | null>(null);
   const [nextTest, setNextTest] = useState<NextTest | null>(null);
   const [running, setRunning] = useState(false);
@@ -73,7 +113,7 @@ export default function Diagnose() {
 
   const handleStart = async (presentation: string, isRetry = false) => {
     setRunning(true);
-    setMessages([]);
+    setIterations([{ iteration: 0, messages: [], complete: false }]);
     setVerdict(null);
     setNextTest(null);
     setError(null);
@@ -86,10 +126,33 @@ export default function Diagnose() {
     try {
       for await (const evt of streamDiagnosis(presentation, controller.signal)) {
         if (evt.event === "agent_complete") {
-          setMessages((prev) => [...prev, messageFromAgentComplete(evt.data)]);
+          setIterations((prev) => {
+            const next = [...prev];
+            const cur = next[next.length - 1];
+            const iterIdx = cur?.iteration ?? 0;
+            const msg = messageFromAgentComplete(evt.data, iterIdx);
+            next[next.length - 1] = {
+              ...cur,
+              messages: [...cur.messages, msg],
+            };
+            return next;
+          });
           if (evt.data.agent === "test_chooser") {
             setNextTest(evt.data.next_test);
           }
+        } else if (evt.event === "round_complete") {
+          setIterations((prev) => {
+            const next = [...prev];
+            if (next.length > 0) {
+              next[next.length - 1] = { ...next[next.length - 1], complete: true };
+            }
+            next.push({
+              iteration: evt.data.iteration + 1,
+              messages: [],
+              complete: false,
+            });
+            return next;
+          });
         } else if (evt.event === "verdict") {
           setVerdict(evt.data);
         } else if (evt.event === "error") {
@@ -112,6 +175,13 @@ export default function Diagnose() {
       abortRef.current = null;
     }
   };
+
+  // Drop trailing empty iterations (e.g. after final round_complete + verdict).
+  const visibleIterations = iterations.filter(
+    (it, idx) => it.messages.length > 0 || idx === 0,
+  );
+
+  const hasAnyMessages = visibleIterations.some((it) => it.messages.length > 0);
 
   return (
     <main className="min-h-screen grid grid-cols-1 lg:grid-cols-[320px_1fr_360px] gap-4 p-4">
@@ -145,7 +215,32 @@ export default function Diagnose() {
         aria-busy={running}
         aria-label="Deliberation transcript"
       >
-        <DebateView messages={messages} running={running} />
+        {!hasAnyMessages && !running ? (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            Paste a case and hit Begin to start the deliberation.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visibleIterations.map((it) => (
+              <div key={it.iteration}>
+                <IterationDivider iteration={it.iteration} />
+                <div className="space-y-3">
+                  {it.messages.map((msg, idx) => (
+                    <AgentCard
+                      key={`${msg.role}-${it.iteration}-${idx}`}
+                      message={msg}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+            {running && (
+              <div className="text-sm text-muted-foreground italic">
+                Panel is thinking...
+              </div>
+            )}
+          </div>
+        )}
       </section>
       <aside className="space-y-4">
         <DifferentialTable verdict={verdict} />
