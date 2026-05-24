@@ -469,3 +469,52 @@ async def test_challenger_happy_path(challenger, mock_llm, base_case):
     assert msg.role.value == "challenger"
     assert msg.structured_output["alternative_to_consider"] == "Transient ischemic attack"
     assert msg.structured_output["confidence_in_challenge"] == 0.7
+
+
+# ============================================================
+# StewardshipAgent
+# ============================================================
+
+
+@pytest.fixture
+def stewardship(mock_llm):
+    from quorum.orchestrator.agents.stewardship import StewardshipAgent
+    return StewardshipAgent(mock_llm)
+
+
+_STEW_JSON_ACCEPT = json.dumps({
+    "accept_test": True,
+    "cost_concern": None,
+    "cheaper_alternative": None,
+})
+
+_STEW_JSON_REJECT = json.dumps({
+    "accept_test": False,
+    "cost_concern": "MRI exceeds the $500 budget",
+    "cheaper_alternative": {
+        "name": "Non-contrast CT head",
+        "rationale": "Adequately rules out hemorrhage at 1/10th cost",
+        "estimated_cost_usd": 150.0,
+        "information_gain_estimate": 0.5,
+        "discriminates_between": [],
+    },
+})
+
+
+@pytest.mark.asyncio
+async def test_stewardship_accepts(stewardship, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_STEW_JSON_ACCEPT, tokens_used=100, cost_usd=0.001, model="x",
+    )
+    msg = await stewardship.deliberate(base_case, [], 0)
+    assert msg.structured_output["accept_test"] is True
+
+
+@pytest.mark.asyncio
+async def test_stewardship_rejects_with_alternative(stewardship, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_STEW_JSON_REJECT, tokens_used=180, cost_usd=0.0018, model="x",
+    )
+    msg = await stewardship.deliberate(base_case, [], 0)
+    assert msg.structured_output["accept_test"] is False
+    assert msg.structured_output["cheaper_alternative"]["estimated_cost_usd"] == 150.0
