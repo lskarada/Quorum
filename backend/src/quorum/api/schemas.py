@@ -20,9 +20,20 @@ class DiagnoseRequest(BaseModel):
     available_tests: list[str] = Field(default_factory=list)
     budget_usd: Optional[float] = None
     max_iterations: int = 5
+    # Optional panel config name. If absent, the API picks the default
+    # (PanelConfig.list_available()[0]). The /api/panels endpoint enumerates
+    # valid names.
+    panel: Optional[str] = Field(default=None, max_length=64)
 
 
 class DiagnoseResponse(BaseModel):
     """POST /api/diagnose response body."""
 
     verdict: FinalVerdict
+
+
+class PanelInfo(BaseModel):
+    """Summary entry for GET /api/panels."""
+
+    name: str
+    description: str
