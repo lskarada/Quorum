@@ -21,6 +21,7 @@ from quorum.orchestrator.schemas import (
     AgentRole,
     DiagnosisCandidate,
     Differential,
+    NextTest,
 )
 
 
@@ -52,6 +53,24 @@ def _make_canned_message(posterior_top: float = 0.75) -> AgentMessage:
     )
 
 
+def _make_canned_test_chooser_message() -> AgentMessage:
+    nt = NextTest(
+        name="Test X",
+        rationale="discriminates A from B",
+        estimated_cost_usd=100.0,
+        information_gain_estimate=0.5,
+        discriminates_between=["Disease A", "Disease B"],
+    )
+    return AgentMessage(
+        role=AgentRole.TEST_CHOOSER,
+        iteration=0,
+        content=f"Recommend: {nt.name} — {nt.rationale}",
+        structured_output=nt,
+        tokens_used=80,
+        cost_usd=0.004,
+    )
+
+
 def _mock_panel(side_effect: Exception | None = None) -> Panel:
     llm = LLMClient.__new__(LLMClient)
     llm.default_model = "claude-opus-4-7"
@@ -60,6 +79,9 @@ def _mock_panel(side_effect: Exception | None = None) -> Panel:
         panel.hypothesis.deliberate = AsyncMock(side_effect=side_effect)
     else:
         panel.hypothesis.deliberate = AsyncMock(return_value=_make_canned_message())
+    panel.test_chooser.deliberate = AsyncMock(
+        return_value=_make_canned_test_chooser_message()
+    )
     return panel
 
 
@@ -159,7 +181,13 @@ async def test_stream_diagnose_emits_three_events_in_order(client_with_mock_pane
         )
     assert response.status_code == 200
     events = _parse_sse_events(response.text)
-    assert [e["event"] for e in events] == ["agent_start", "agent_complete", "verdict"]
+    assert [e["event"] for e in events] == [
+        "agent_start",
+        "agent_complete",
+        "agent_start",
+        "agent_complete",
+        "verdict",
+    ]
 
 
 async def test_stream_diagnose_agent_complete_payload(client_with_mock_panel):

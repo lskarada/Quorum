@@ -53,18 +53,32 @@ class Panel:
         self.checklist = ChecklistAgent(llm)
 
     async def diagnose(self, case: CaseInput) -> FinalVerdict:
+        messages: list[AgentMessage] = []
         try:
-            message = await self.hypothesis.deliberate(case, [], 0)
+            hyp_msg = await self.hypothesis.deliberate(case, [], 0)
         except asyncio.CancelledError:
             raise
         except Exception:
             logger.exception("hypothesis.deliberate failed for case %s", case.case_id)
             return self._error_verdict(case)
-        return self._build_verdict(case, message)
+        messages.append(hyp_msg)
+
+        try:
+            tc_msg = await self.test_chooser.deliberate(case, list(messages), 0)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("test_chooser.deliberate failed for case %s", case.case_id)
+            return self._error_verdict(case)
+        messages.append(tc_msg)
+
+        return self._build_verdict(case, messages)
 
     async def diagnose_stream(
         self, case: CaseInput
     ) -> AsyncIterator[StreamEvent]:
+        messages: list[AgentMessage] = []
+
         yield StreamEvent(
             event="agent_start",
             data={"agent": "hypothesis", "iteration": 0},
@@ -72,7 +86,7 @@ class Panel:
 
         started = time.perf_counter()
         try:
-            message = await self.hypothesis.deliberate(case, [], 0)
+            hyp_msg = await self.hypothesis.deliberate(case, [], 0)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -88,23 +102,64 @@ class Panel:
             )
             return
         elapsed_ms = int((time.perf_counter() - started) * 1000)
+        messages.append(hyp_msg)
 
         yield StreamEvent(
             event="agent_complete",
             data={
                 "agent": "hypothesis",
-                "differential": message.structured_output.model_dump(mode="json"),
-                "tokens_used": message.tokens_used,
-                "cost_usd": message.cost_usd,
+                "differential": hyp_msg.structured_output.model_dump(mode="json"),
+                "tokens_used": hyp_msg.tokens_used,
+                "cost_usd": hyp_msg.cost_usd,
                 "latency_ms": elapsed_ms,
             },
         )
 
-        verdict = self._build_verdict(case, message)
+        yield StreamEvent(
+            event="agent_start",
+            data={"agent": "test_chooser", "iteration": 0},
+        )
+
+        started_tc = time.perf_counter()
+        try:
+            tc_msg = await self.test_chooser.deliberate(case, list(messages), 0)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception("test_chooser.deliberate failed mid-stream")
+            yield StreamEvent(
+                event="error",
+                data={
+                    "code": self._classify_error(exc),
+                    "message": str(exc),
+                    "retriable": self._is_retriable(exc),
+                    "http_status": None,
+                },
+            )
+            return
+        messages.append(tc_msg)
+
+        yield StreamEvent(
+            event="agent_complete",
+            data={
+                "agent": "test_chooser",
+                "next_test": tc_msg.structured_output.model_dump(mode="json"),
+                "tokens_used": tc_msg.tokens_used,
+                "cost_usd": tc_msg.cost_usd,
+                "latency_ms": int((time.perf_counter() - started_tc) * 1000),
+            },
+        )
+
+        verdict = self._build_verdict(case, messages)
         yield StreamEvent(event="verdict", data=verdict.model_dump(mode="json"))
 
-    def _build_verdict(self, case: CaseInput, message: AgentMessage) -> FinalVerdict:
-        diff = message.structured_output
+    def _build_verdict(
+        self, case: CaseInput, messages: list[AgentMessage]
+    ) -> FinalVerdict:
+        if not messages:
+            raise ValueError("cannot build verdict from empty transcript")
+        hyp_msg = messages[0]
+        diff = hyp_msg.structured_output
         if not isinstance(diff, Differential):
             raise TypeError(
                 "Hypothesis must produce a Differential as structured_output; "
@@ -121,9 +176,9 @@ class Panel:
             final_differential=diff,
             confidence=top_posterior,
             iterations_used=1,
-            total_tokens=message.tokens_used,
-            total_cost_usd=message.cost_usd,
-            transcript=[message],
+            total_tokens=sum(m.tokens_used for m in messages),
+            total_cost_usd=sum(m.cost_usd for m in messages),
+            transcript=list(messages),
             termination_reason=termination_reason,
         )
 

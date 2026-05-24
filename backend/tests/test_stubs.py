@@ -17,12 +17,13 @@ from quorum.orchestrator.agents import (
     ChallengerAgent,
     ChecklistAgent,
     StewardshipAgent,
-    TestChooserAgent,
 )
 from quorum.orchestrator.schemas import CaseInput
 
 # HypothesisAgent's NotImplementedError contract moved to test_agents.py once
 # its deliberate() was implemented in the vertical-slice phase.
+# TestChooserAgent's NotImplementedError contract moved to test_agents.py once
+# its deliberate() was implemented in Phase 3.
 
 
 def _case() -> CaseInput:
@@ -31,7 +32,7 @@ def _case() -> CaseInput:
 
 @pytest.mark.parametrize(
     "AgentCls",
-    [TestChooserAgent, ChallengerAgent, StewardshipAgent, ChecklistAgent],
+    [ChallengerAgent, ChecklistAgent, StewardshipAgent],
 )
 def test_agent_deliberate_raises_not_implemented(AgentCls):
     # Bypass __init__ so we don't need OPENROUTER_API_KEY for a stub-only test

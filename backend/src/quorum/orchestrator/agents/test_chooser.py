@@ -1,19 +1,15 @@
-"""Dr. Test-Chooser — selects the most informative next diagnostic test."""
+"""TestChooserAgent — recommends the next diagnostic test."""
 from __future__ import annotations
 
+import json
 from typing import AsyncIterator
 
 from quorum.orchestrator.agents.base import Agent
-from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput
+from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput, NextTest
 
 
 class TestChooserAgent(Agent):
-    """Picks the next test that maximally discriminates between top candidates.
-
-    Output contract: structured_output is a NextTest with rationale,
-    estimated_cost_usd (if available), and discriminates_between listing
-    the DiagnosisCandidate names the test separates.
-    """
+    """Selects the next test that maximally discriminates between top candidates."""
 
     role = AgentRole.TEST_CHOOSER
     __test__ = False  # pytest discovery: not a test class despite "Test" prefix
@@ -24,10 +20,31 @@ class TestChooserAgent(Agent):
         transcript: list[AgentMessage],
         iteration: int,
     ) -> AgentMessage:
-        # TODO: read the latest Differential from transcript; ask the LLM for
-        # the cheapest test that maximizes expected information gain across
-        # the top-2 or top-3 candidates; parse into NextTest.
-        raise NotImplementedError
+        system = self.prompt_template
+        user_parts: list[str] = [f"# Case\n{case.presentation}"]
+        if transcript:
+            user_parts.append("# Panel transcript so far")
+            for m in transcript:
+                user_parts.append(f"## {m.role.value}\n{m.content}")
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": "\n\n".join(user_parts)},
+        ]
+        resp = await self.llm.complete(
+            messages=messages,
+            response_format={"type": "json_object"},
+            max_tokens=2048,
+        )
+        data = json.loads(resp.content)
+        next_test = NextTest.model_validate(data)
+        return AgentMessage(
+            role=self.role,
+            iteration=iteration,
+            content=f"Recommend: {next_test.name} — {next_test.rationale}",
+            structured_output=next_test,
+            tokens_used=resp.tokens_used,
+            cost_usd=resp.cost_usd,
+        )
 
     async def deliberate_stream(
         self,
@@ -35,6 +52,5 @@ class TestChooserAgent(Agent):
         transcript: list[AgentMessage],
         iteration: int,
     ) -> AsyncIterator[str]:
-        # TODO: streaming variant.
         raise NotImplementedError
-        yield
+        yield  # unreachable; keeps mypy happy

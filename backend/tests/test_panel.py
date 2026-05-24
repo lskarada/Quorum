@@ -31,6 +31,7 @@ from quorum.orchestrator.schemas import (
     Differential,
     DiagnosisCandidate,
     FinalVerdict,
+    NextTest,
     StreamEvent,
 )
 
@@ -66,6 +67,24 @@ def make_canned_message(posterior_top: float = 0.75) -> AgentMessage:
     )
 
 
+def make_canned_test_chooser_message() -> AgentMessage:
+    nt = NextTest(
+        name="Test X",
+        rationale="discriminates A from B",
+        estimated_cost_usd=100.0,
+        information_gain_estimate=0.5,
+        discriminates_between=["Disease A", "Disease B"],
+    )
+    return AgentMessage(
+        role=AgentRole.TEST_CHOOSER,
+        iteration=0,
+        content=f"Recommend: {nt.name} — {nt.rationale}",
+        structured_output=nt,
+        tokens_used=80,
+        cost_usd=0.004,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -77,6 +96,9 @@ def panel_with_mock_hypothesis(monkeypatch):
     llm.default_model = "claude-opus-4-7"
     panel = Panel(llm)
     panel.hypothesis.deliberate = AsyncMock(return_value=make_canned_message())
+    panel.test_chooser.deliberate = AsyncMock(
+        return_value=make_canned_test_chooser_message()
+    )
     return panel
 
 
@@ -88,19 +110,21 @@ def panel_with_mock_hypothesis(monkeypatch):
 async def test_diagnose_happy_path_returns_final_verdict(panel_with_mock_hypothesis):
     """Happy path: Panel.diagnose() returns a structurally correct FinalVerdict."""
     panel = panel_with_mock_hypothesis
-    canned = make_canned_message()
+    canned_hyp = make_canned_message()
+    canned_tc = make_canned_test_chooser_message()
     case = CaseInput(presentation="Patient presents with fever and rash.")
 
     verdict = await panel.diagnose(case)
 
     assert isinstance(verdict, FinalVerdict)
-    assert verdict.final_differential == canned.structured_output
-    assert verdict.confidence == canned.structured_output.candidates[0].posterior
+    assert verdict.final_differential == canned_hyp.structured_output
+    assert verdict.confidence == canned_hyp.structured_output.candidates[0].posterior
     assert verdict.iterations_used == 1
-    assert verdict.total_tokens == canned.tokens_used
-    assert verdict.total_cost_usd == canned.cost_usd
-    assert len(verdict.transcript) == 1
+    assert verdict.total_tokens == canned_hyp.tokens_used + canned_tc.tokens_used
+    assert verdict.total_cost_usd == canned_hyp.cost_usd + canned_tc.cost_usd
+    assert len(verdict.transcript) == 2
     assert verdict.transcript[0].role == AgentRole.HYPOTHESIS
+    assert verdict.transcript[1].role == AgentRole.TEST_CHOOSER
     assert verdict.termination_reason in {"consensus", "max_iterations"}
 
 
@@ -208,14 +232,20 @@ async def _collect_stream(panel: Panel, case: CaseInput) -> list[StreamEvent]:
 
 
 async def test_stream_event_order_on_happy_path(panel_with_mock_hypothesis):
-    """Happy path: event sequence must be agent_start → agent_complete → verdict."""
+    """Happy path: hypothesis start/complete, test_chooser start/complete, verdict."""
     panel = panel_with_mock_hypothesis
     case = CaseInput(presentation="Streaming happy path.")
 
     events = await _collect_stream(panel, case)
 
-    assert len(events) == 3
-    assert [e.event for e in events] == ["agent_start", "agent_complete", "verdict"]
+    assert len(events) == 5
+    assert [e.event for e in events] == [
+        "agent_start",
+        "agent_complete",
+        "agent_start",
+        "agent_complete",
+        "verdict",
+    ]
 
 
 async def test_stream_agent_start_data(panel_with_mock_hypothesis):
@@ -277,3 +307,50 @@ async def test_stream_emits_error_event_on_hypothesis_failure(panel_with_mock_hy
     # No events after the error event
     error_idx = events.index(error_events[0])
     assert error_idx == len(events) - 1
+
+
+async def test_panel_stream_emits_test_chooser_after_hypothesis(base_case):
+    """After hypothesis, panel runs TestChooser and yields its events before verdict."""
+    # Mock LLMClient so both agents get canned responses
+    import json
+
+    from quorum.llm.client import LLMResponse
+
+    llm = LLMClient.__new__(LLMClient)
+    llm.default_model = "x"
+    # Hypothesis: a 3-candidate differential; TestChooser: a NextTest
+    hyp_json = json.dumps({
+        "candidates": [
+            {"name": "Diagnosis A", "posterior": 0.5, "rationale": "r",
+             "supporting_findings": [], "against_findings": [], "citations": []},
+            {"name": "Diagnosis B", "posterior": 0.3, "rationale": "r",
+             "supporting_findings": [], "against_findings": [], "citations": []},
+            {"name": "Diagnosis C", "posterior": 0.2, "rationale": "r",
+             "supporting_findings": [], "against_findings": [], "citations": []},
+        ],
+        "iteration": 0,
+    })
+    tc_json = json.dumps({
+        "name": "Test X", "rationale": "discriminates",
+        "estimated_cost_usd": 100.0, "information_gain_estimate": 0.5,
+        "discriminates_between": ["Diagnosis A", "Diagnosis B"],
+    })
+    llm.complete = AsyncMock(side_effect=[
+        LLMResponse(content=hyp_json, tokens_used=100, cost_usd=0.001, model="x"),
+        LLMResponse(content=tc_json, tokens_used=80, cost_usd=0.0008, model="x"),
+    ])
+    panel = Panel(llm)
+    events = [ev async for ev in panel.diagnose_stream(base_case)]
+    event_names = [(e.event, e.data.get("agent")) for e in events]
+    assert event_names == [
+        ("agent_start", "hypothesis"),
+        ("agent_complete", "hypothesis"),
+        ("agent_start", "test_chooser"),
+        ("agent_complete", "test_chooser"),
+        ("verdict", None),
+    ]
+
+
+@pytest.fixture
+def base_case() -> CaseInput:
+    return CaseInput(presentation="placeholder presentation for panel stream test")

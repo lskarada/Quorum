@@ -25,11 +25,13 @@ from pydantic import ValidationError
 
 from quorum.llm.client import LLMClient, LLMResponse
 from quorum.orchestrator.agents.hypothesis import HypothesisAgent
+from quorum.orchestrator.agents.test_chooser import TestChooserAgent
 from quorum.orchestrator.schemas import (
     AgentMessage,
     AgentRole,
     CaseInput,
     Differential,
+    NextTest,
 )
 
 
@@ -398,3 +400,43 @@ async def test_llm_runtime_error_propagates(
     # Post-implementation: must be RuntimeError with the provider message.
     if not isinstance(exc_info.value, NotImplementedError):
         assert "provider 429" in str(exc_info.value)
+
+
+# ============================================================
+# TestChooserAgent
+# ============================================================
+
+
+@pytest.fixture
+def test_chooser(mock_llm) -> TestChooserAgent:
+    return TestChooserAgent(mock_llm)
+
+
+_NEXT_TEST_JSON = json.dumps({
+    "name": "MRI brain w/ contrast",
+    "rationale": "Discriminates between cerebrovascular and inflammatory etiologies",
+    "estimated_cost_usd": 1200.0,
+    "information_gain_estimate": 0.8,
+    "discriminates_between": ["Acute ischemic stroke", "CNS vasculitis"],
+})
+
+
+async def test_test_chooser_happy_path(test_chooser, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content=_NEXT_TEST_JSON, tokens_used=300, cost_usd=0.003,
+        model="anthropic/claude-opus-4",
+    )
+    msg = await test_chooser.deliberate(base_case, transcript=[], iteration=0)
+    assert msg.role == AgentRole.TEST_CHOOSER
+    assert isinstance(msg.structured_output, NextTest)
+    assert msg.structured_output.name == "MRI brain w/ contrast"
+    assert msg.structured_output.estimated_cost_usd == 1200.0
+    assert msg.tokens_used == 300
+
+
+async def test_test_chooser_malformed_json_raises(test_chooser, mock_llm, base_case):
+    mock_llm.complete.return_value = LLMResponse(
+        content="not json", tokens_used=10, cost_usd=0.0, model="x",
+    )
+    with pytest.raises((ValueError, json.JSONDecodeError)):
+        await test_chooser.deliberate(base_case, [], 0)
