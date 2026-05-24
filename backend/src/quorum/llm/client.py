@@ -1,22 +1,11 @@
-"""Unified LLM client abstracting over Anthropic, OpenAI, and Google."""
+"""Unified LLM client routed through OpenRouter (OpenAI-SDK-compatible)."""
 from __future__ import annotations
 
-from typing import AsyncIterator, Literal
+import os
+from collections.abc import AsyncIterator
 
+from openai import AsyncOpenAI
 from pydantic import BaseModel
-
-
-ModelName = Literal[
-    "claude-opus-4-7",
-    "claude-sonnet-4-6",
-    "gpt-5",
-    "gpt-5-mini",
-    "gemini-2.5-pro",
-    # Cloudflare Workers AI (open-source). Slugs translated to "@cf/..."
-    # inside WorkersAIProvider.CF_MODEL_SLUG.
-    "llama-3.3-70b-instruct",
-    "mistral-small-3.1-24b-instruct",
-]
 
 
 class LLMResponse(BaseModel):
@@ -27,44 +16,79 @@ class LLMResponse(BaseModel):
 
 
 class LLMClient:
-    """Unified async client. Picks the right provider based on model name.
+    """OpenRouter-routed LLM client.
 
-    Provider routing (by model-name prefix):
-        claude-*    → AnthropicProvider
-        gpt-*       → OpenAIProvider
-        gemini-*    → GoogleProvider
-        llama-*, mistral-*  → WorkersAIProvider (Cloudflare Workers AI)
-
-    When `CLOUDFLARE_AI_GATEWAY_URL` is set, ALL four providers can be
-    routed through it for caching/observability/fallback. Each provider's
-    base URL becomes `{gateway}/{provider-name}` instead of the SDK default.
-    See docs/architecture.md for the gateway data-flow diagram.
+    Model names are OpenRouter vendor-prefixed strings:
+        anthropic/claude-opus-4
+        openai/gpt-4o
+        google/gemini-2.5-pro
+        meta-llama/llama-3.3-70b-instruct
+        mistralai/mistral-small-3.1-24b-instruct
     """
 
-    def __init__(self, default_model: ModelName = "claude-opus-4-7"):
+    def __init__(self, default_model: str = "anthropic/claude-opus-4"):
+        api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "OPENROUTER_API_KEY not set. See .env.example."
+            )
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+
+        extra_headers = {}
+        if site := os.environ.get("OPENROUTER_SITE_URL"):
+            extra_headers["HTTP-Referer"] = site
+        if app := os.environ.get("OPENROUTER_APP_NAME"):
+            extra_headers["X-Title"] = app
+
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            default_headers=extra_headers or None,
+        )
         self.default_model = default_model
-        # TODO: initialize provider clients lazily; honor CLOUDFLARE_AI_GATEWAY_URL
-        # by passing it into every provider's `gateway_url` kwarg when present.
 
     async def complete(
         self,
         messages: list[dict],
-        model: ModelName | None = None,
+        model: str | None = None,
         response_format: dict | None = None,
         max_tokens: int = 4096,
     ) -> LLMResponse:
-        """Non-streaming completion."""
-        # TODO: route to correct provider; aggregate usage + cost
-        raise NotImplementedError
+        kwargs: dict = {
+            "model": model or self.default_model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+        }
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
+        r = await self._client.chat.completions.create(**kwargs)
+        usage = r.usage
+        cost = getattr(usage, "cost", 0.0) or 0.0
+        return LLMResponse(
+            content=r.choices[0].message.content or "",
+            tokens_used=getattr(usage, "total_tokens", 0) or 0,
+            cost_usd=float(cost),
+            model=r.model,
+        )
 
     async def stream(
         self,
         messages: list[dict],
-        model: ModelName | None = None,
+        model: str | None = None,
         response_format: dict | None = None,
         max_tokens: int = 4096,
     ) -> AsyncIterator[str]:
-        """Streaming completion. Yields token deltas."""
-        # TODO
-        raise NotImplementedError
-        yield  # keeps mypy happy
+        kwargs: dict = {
+            "model": model or self.default_model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
+        async for chunk in await self._client.chat.completions.create(**kwargs):
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                yield delta

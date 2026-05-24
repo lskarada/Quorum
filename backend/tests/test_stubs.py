@@ -34,7 +34,11 @@ def _case() -> CaseInput:
     [TestChooserAgent, ChallengerAgent, StewardshipAgent, ChecklistAgent],
 )
 def test_agent_deliberate_raises_not_implemented(AgentCls):
-    agent = AgentCls(LLMClient())
+    # Bypass __init__ so we don't need OPENROUTER_API_KEY for a stub-only test
+    # (matches the LLMClient.__new__ pattern used in test_agents/test_panel).
+    llm = LLMClient.__new__(LLMClient)
+    llm.default_model = "anthropic/claude-opus-4"
+    agent = AgentCls(llm)
     with pytest.raises(NotImplementedError):
         asyncio.run(agent.deliberate(_case(), [], 0))
 
@@ -42,11 +46,8 @@ def test_agent_deliberate_raises_not_implemented(AgentCls):
 # Panel.diagnose NotImplementedError contract moved to test_panel.py once
 # the single-agent vertical slice was implemented.
 
-
-def test_llm_client_complete_raises_not_implemented():
-    client = LLMClient()
-    with pytest.raises(NotImplementedError):
-        asyncio.run(client.complete(messages=[{"role": "user", "content": "x"}]))
+# LLMClient.complete NotImplementedError contract moved to test_llm_client.py
+# once the OpenRouter-routed implementation landed.
 
 
 def test_mcp_diagnose_case_tool_raises_not_implemented():
@@ -66,15 +67,5 @@ def test_eval_corpus_loader_raises_not_implemented():
 # stream_event_to_sse NotImplementedError contract moved to test_api_diagnose.py
 # coverage (the helper is exercised by every streaming acceptance test).
 
-
-def test_workers_ai_provider_complete_raises_not_implemented():
-    from quorum.llm.providers.workers_ai_provider import WorkersAIProvider
-
-    provider = WorkersAIProvider()
-    with pytest.raises(NotImplementedError):
-        asyncio.run(
-            provider.complete(
-                messages=[{"role": "user", "content": "x"}],
-                model="llama-3.3-70b-instruct",
-            )
-        )
+# WorkersAI provider stub removed in Phase 1: all four single-provider stubs
+# were collapsed into a single OpenRouter-routed LLMClient (see test_llm_client.py).
