@@ -93,7 +93,11 @@ class FinalVerdict(BaseModel):
     total_tokens: int
     total_cost_usd: float
     transcript: list[AgentMessage]
-    termination_reason: Literal["consensus", "budget", "max_iterations", "error"]
+    termination_reason: Literal[
+        "consensus", "budget", "max_iterations", "checklist_stop", "error"
+    ]
+    schema_version: int = 1
+    is_error: bool = False
 
 
 class StreamEvent(BaseModel):

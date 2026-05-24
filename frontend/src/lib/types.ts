@@ -69,6 +69,7 @@ export type TerminationReason =
   | "consensus"
   | "budget"
   | "max_iterations"
+  | "checklist_stop"
   | "error";
 
 export interface FinalVerdict {
@@ -81,6 +82,8 @@ export interface FinalVerdict {
   total_cost_usd: number;
   transcript: AgentMessage[];
   termination_reason: TerminationReason;
+  schema_version: number;
+  is_error: boolean;
 }
 
 // Backend error envelope (A3 of docs/IMPLEMENTATION_PLAN.md).
