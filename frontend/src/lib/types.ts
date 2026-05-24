@@ -99,20 +99,31 @@ export interface ErrorPayload {
 }
 
 // SSE event discriminated union — mirrors backend StreamEvent. Only the
-// variants emitted in the single-agent vertical slice are typed here;
-// agent_token / round_complete will be added when streaming + multi-iter
-// land.
+// variants emitted in the vertical slice + Phase 3 test_chooser are typed
+// here; agent_token / round_complete will be added when streaming +
+// multi-iter land.
+export interface AgentCompleteHypothesisData {
+  agent: "hypothesis";
+  differential: Differential;
+  tokens_used: number;
+  cost_usd: number;
+  latency_ms: number;
+}
+
+export interface AgentCompleteTestChooserData {
+  agent: "test_chooser";
+  next_test: NextTest;
+  tokens_used: number;
+  cost_usd: number;
+  latency_ms: number;
+}
+
+export type AgentCompleteData =
+  | AgentCompleteHypothesisData
+  | AgentCompleteTestChooserData;
+
 export type StreamEvent =
   | { event: "agent_start"; data: { agent: AgentRole; iteration: number } }
-  | {
-      event: "agent_complete";
-      data: {
-        agent: AgentRole;
-        differential: Differential;
-        tokens_used: number;
-        cost_usd: number;
-        latency_ms: number;
-      };
-    }
+  | { event: "agent_complete"; data: AgentCompleteData }
   | { event: "verdict"; data: FinalVerdict }
   | { event: "error"; data: ErrorPayload };

@@ -7,15 +7,16 @@ import { NextTestCard } from "@/components/next-test-card";
 import { ConfidenceMeter } from "@/components/confidence-meter";
 import { streamDiagnosis } from "@/lib/sse";
 import type {
+  AgentCompleteData,
+  AgentCompleteHypothesisData,
+  AgentCompleteTestChooserData,
   AgentMessage,
   ErrorPayload,
   FinalVerdict,
-  StreamEvent,
+  NextTest,
 } from "@/lib/types";
 
-type AgentCompleteData = Extract<StreamEvent, { event: "agent_complete" }>["data"];
-
-function messageFromAgentComplete(data: AgentCompleteData): AgentMessage {
+function hypothesisMessage(data: AgentCompleteHypothesisData): AgentMessage {
   const top = data.differential.candidates[0]?.name ?? "(empty)";
   return {
     role: data.agent,
@@ -29,9 +30,28 @@ function messageFromAgentComplete(data: AgentCompleteData): AgentMessage {
   };
 }
 
+function testChooserMessage(data: AgentCompleteTestChooserData): AgentMessage {
+  return {
+    role: data.agent,
+    iteration: 0,
+    content: `Recommend: ${data.next_test.name} — ${data.next_test.rationale}`,
+    structured_output: data.next_test,
+    citations: [],
+    timestamp: new Date().toISOString(),
+    tokens_used: data.tokens_used,
+    cost_usd: data.cost_usd,
+  };
+}
+
+function messageFromAgentComplete(data: AgentCompleteData): AgentMessage {
+  if (data.agent === "test_chooser") return testChooserMessage(data);
+  return hypothesisMessage(data);
+}
+
 export default function Diagnose() {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [verdict, setVerdict] = useState<FinalVerdict | null>(null);
+  const [nextTest, setNextTest] = useState<NextTest | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<ErrorPayload | null>(null);
   const [retriesUsed, setRetriesUsed] = useState(0);
@@ -55,6 +75,7 @@ export default function Diagnose() {
     setRunning(true);
     setMessages([]);
     setVerdict(null);
+    setNextTest(null);
     setError(null);
     if (!isRetry) setRetriesUsed(0);
     lastPresentationRef.current = presentation;
@@ -66,6 +87,9 @@ export default function Diagnose() {
       for await (const evt of streamDiagnosis(presentation, controller.signal)) {
         if (evt.event === "agent_complete") {
           setMessages((prev) => [...prev, messageFromAgentComplete(evt.data)]);
+          if (evt.data.agent === "test_chooser") {
+            setNextTest(evt.data.next_test);
+          }
         } else if (evt.event === "verdict") {
           setVerdict(evt.data);
         } else if (evt.event === "error") {
@@ -125,7 +149,7 @@ export default function Diagnose() {
       </section>
       <aside className="space-y-4">
         <DifferentialTable verdict={verdict} />
-        <NextTestCard verdict={verdict} />
+        <NextTestCard verdict={verdict} nextTest={nextTest} />
         <ConfidenceMeter verdict={verdict} />
         <CitationPanel verdict={verdict} />
       </aside>
