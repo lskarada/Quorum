@@ -7,12 +7,11 @@ emits an AgentMessage with structured output appropriate to its role.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import AsyncIterator
 
 from quorum.llm.client import LLMClient
 from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput
-
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 

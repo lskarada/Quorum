@@ -6,7 +6,6 @@ monkey-patch `_llm_match` to make tests hermetic (no API calls).
 from __future__ import annotations
 
 import pytest
-
 from quorum.eval.eval_case import EvalCase, Finding
 from quorum.gatekeeper.gatekeeper import Gatekeeper, GatekeeperResponse
 
@@ -20,7 +19,11 @@ def toy_case() -> EvalCase:
         initial_presentation="patient with chest pain",
         available_findings=[
             Finding(category="labs", label="Troponin", content="Troponin 0.15 ng/mL (elevated)"),
-            Finding(category="imaging", label="Chest x-ray", content="No cardiomegaly, clear lungs"),
+            Finding(
+                category="imaging",
+                label="Chest x-ray",
+                content="No cardiomegaly, clear lungs",
+            ),
         ],
         ground_truth_diagnosis="acute myocardial infarction",
         acceptable_partial_credit=[],

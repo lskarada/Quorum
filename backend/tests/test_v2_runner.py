@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-
 from quorum.eval.eval_case import EvalCase, Finding
 from quorum.eval.v2_runner import run_arm_a, run_arm_b
 from quorum.llm.client import LLMClient, LLMResponse

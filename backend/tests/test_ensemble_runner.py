@@ -162,10 +162,10 @@ async def test_verdict_round_trips_through_score_run(tmp_path: pathlib.Path):
 @pytest.mark.asyncio
 async def test_total_cost_sums_across_calls():
     llm = _mock_llm_with_returns([_diff_json("A")] * 5)
-    verdict, stats = await run_ensemble(
+    verdict, _stats = await run_ensemble(
         _CASE, model="anthropic/claude-haiku-4-5", n_votes=5, llm=llm
     )
-    assert verdict.total_cost_usd == pytest.approx(0.005)  # 5 × $0.001
+    assert verdict.total_cost_usd == pytest.approx(0.005)  # 5 x $0.001
     assert verdict.total_tokens == 5 * 42
     assert verdict.iterations_used == 1
 

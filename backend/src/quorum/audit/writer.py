@@ -1,9 +1,8 @@
 """AuditWriter: streams CaseAudit JSONL to disk."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from .schemas import CaseAudit, TurnRecord
 
@@ -15,7 +14,7 @@ class AuditWriter:
         run_id: str,
         case_id: str,
         model: str,
-        panel_config_name: Optional[str] = None,
+        panel_config_name: str | None = None,
     ):
         self.root = root
         self.run_id = run_id
@@ -34,13 +33,13 @@ class AuditWriter:
         if "turn_index" not in kwargs:
             kwargs["turn_index"] = len(self.audit.turns) + 1
         if "timestamp" not in kwargs:
-            kwargs["timestamp"] = datetime.now(timezone.utc)
+            kwargs["timestamp"] = datetime.now(UTC)
         self.audit.turns.append(TurnRecord(**kwargs))
 
     def set_final(
         self,
-        committed_diagnosis: Optional[str] = None,
-        final_posterior: Optional[dict[str, float]] = None,
+        committed_diagnosis: str | None = None,
+        final_posterior: dict[str, float] | None = None,
         real_cost_usd: float = 0.0,
         simulated_cost_usd: float = 0.0,
     ) -> None:
@@ -48,7 +47,7 @@ class AuditWriter:
         self.audit.final_posterior = final_posterior or {}
         self.audit.real_cost_usd = real_cost_usd
         self.audit.simulated_cost_usd = simulated_cost_usd
-        self.audit.completed_at = datetime.now(timezone.utc)
+        self.audit.completed_at = datetime.now(UTC)
 
     def set_judge(self, score: str, rationale: str) -> None:
         self.audit.judge_score = score  # type: ignore[assignment]

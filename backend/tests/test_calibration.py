@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import pytest
-
 from quorum.calibration.metrics import compute_brier, compute_ece
 
 

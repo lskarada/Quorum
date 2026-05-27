@@ -28,8 +28,8 @@ function dedupe(citations: Citation[]): Citation[] {
 export function CitationPanel({ verdict }: CitationPanelProps) {
   if (!verdict) return null;
   const all: Citation[] = [];
-  for (const m of verdict.transcript) all.push(...m.citations);
-  for (const cand of verdict.final_differential.candidates) all.push(...cand.citations);
+  for (const m of verdict.transcript) all.push(...(m.citations ?? []));
+  for (const cand of verdict.final_differential.candidates) all.push(...(cand.citations ?? []));
   const unique = dedupe(all);
 
   if (unique.length === 0) return null;

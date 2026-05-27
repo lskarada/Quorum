@@ -12,3 +12,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's idiomatic `Depends(...)` in default args trips B008.
+"backend/src/quorum/api/routes.py" = ["B008"]
+# `MockX` is the conventional name for unittest.mock patch targets.
+"backend/tests/test_mcp_tools.py" = ["N806"]

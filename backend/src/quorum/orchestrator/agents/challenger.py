@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from quorum.orchestrator.agents.base import Agent
 from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput
@@ -13,7 +14,7 @@ class ChallengerAgent(Agent):
 
     Output contract: structured_output is a dict with keys
     `against_top_candidate` (list of findings), `alternative_to_consider`
-    (DiagnosisCandidate name or "none"), and `confidence_in_challenge` (0–1).
+    (DiagnosisCandidate name or "none"), and `confidence_in_challenge` (0-1).
     """
 
     role = AgentRole.CHALLENGER

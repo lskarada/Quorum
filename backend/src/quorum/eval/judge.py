@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from quorum.audit.schemas import CaseAudit, TurnRecord
 from quorum.eval.eval_case import EvalCase
 from quorum.llm.client import LLMClient
 
@@ -27,7 +26,8 @@ AI_COMMITTED: {ai_committed}
 
 Score one of three:
 - "full_credit": AI committed to the GROUND_TRUTH, or a synonymous/equivalent rephrasing.
-- "partial_credit": AI committed to one of ACCEPTABLE_PARTIAL_CREDIT entries, or a diagnosis capturing disease category but missing specifics.
+- "partial_credit": AI committed to one of ACCEPTABLE_PARTIAL_CREDIT entries, or a
+  diagnosis capturing disease category but missing specifics.
 - "no_credit": AI committed to something not in either list.
 
 Provide a one-sentence rationale.

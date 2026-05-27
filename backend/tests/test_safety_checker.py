@@ -1,9 +1,7 @@
 """Tests for the deterministic safety layer (Phase 5 Task 5.1)."""
 from __future__ import annotations
 
-import pytest
-
-from quorum.orchestrator.safety import SafetyChecker, SafetyVerdict
+from quorum.orchestrator.safety import SafetyChecker
 
 
 def test_block_commit_without_enough_findings():

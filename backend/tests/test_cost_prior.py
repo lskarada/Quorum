@@ -12,10 +12,9 @@ import pathlib
 import tempfile
 
 import pytest
+from quorum.eval.cli import app
 from quorum.orchestrator.panel_config import PanelConfig
 from typer.testing import CliRunner
-
-from quorum.eval.cli import app
 
 _YAML_WITH_PRIOR = """\
 name: cp_test_with
@@ -87,6 +86,8 @@ def test_eval_run_warns_when_budget_exceeded_by_prior(monkeypatch, tmp_path):
     )
     assert result.exit_code != 0, f"expected non-zero on cap exceeded, got stdout={result.stdout}"
     combined = (result.stdout or "") + (str(result.exception) if result.exception else "")
-    assert "4.20" in combined or "projected" in combined.lower() or "cost_prior" in combined.lower(), (
-        f"expected cost-prior warning, got: {combined}"
-    )
+    assert (
+        "4.20" in combined
+        or "projected" in combined.lower()
+        or "cost_prior" in combined.lower()
+    ), f"expected cost-prior warning, got: {combined}"

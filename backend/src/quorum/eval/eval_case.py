@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,7 @@ class EvalCase(BaseModel):
     available_findings: list[Finding] = Field(default_factory=list)
     ground_truth_diagnosis: str
     acceptable_partial_credit: list[str] = Field(default_factory=list)
-    difficulty: Optional[str] = "hard"
+    difficulty: str | None = "hard"
     specialty_tags: list[str] = Field(default_factory=list)
 
 
@@ -78,11 +78,12 @@ def _load_rarebench(raw: dict) -> EvalCase:
     )
 
 
-def load_corpus(split: Optional[Literal["tune", "eval"]] = None) -> list[EvalCase]:
+def load_corpus(split: Literal["tune", "eval"] | None = None) -> list[EvalCase]:
     """Load all 35 v2 cases (or a TUNE/EVAL partition) as EvalCase models."""
     nejm = [_load_nejm(c) for c in json.loads((CORPUS_DIR / "nejm_sample.json").read_text())]
     mcr = [_load_mcr(c) for c in json.loads((CORPUS_DIR / "mcr_sample.json").read_text())]
-    rb = [_load_rarebench(c) for c in json.loads((CORPUS_DIR / "rarebench_sample.json").read_text())]
+    rb_path = CORPUS_DIR / "rarebench_sample.json"
+    rb = [_load_rarebench(c) for c in json.loads(rb_path.read_text())]
     all_cases = nejm + mcr + rb
 
     if split is None:

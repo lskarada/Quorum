@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -29,7 +28,7 @@ class GatekeeperResponse:
     matched: bool
     content: str
     cost_usd: float
-    matched_label: Optional[str] = None
+    matched_label: str | None = None
     turn_index: int = 0
 
 
@@ -45,7 +44,7 @@ class Gatekeeper:
         self,
         case: EvalCase,
         *,
-        llm_client: Optional[LLMClient] = None,
+        llm_client: LLMClient | None = None,
         max_turns: int = DEFAULT_MAX_TURNS,
         max_cost_usd: float = DEFAULT_MAX_COST,
     ):

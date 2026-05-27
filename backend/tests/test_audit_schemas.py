@@ -1,7 +1,7 @@
 """AuditTrail schema tests (Phase 3 Task 3.1)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from quorum.audit.schemas import CaseAudit, TurnRecord
 
@@ -9,7 +9,7 @@ from quorum.audit.schemas import CaseAudit, TurnRecord
 def test_turnrecord_roundtrip():
     t = TurnRecord(
         turn_index=3,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         agent="hypothesis",
         message_role="out",
         content="Posterior: {SLE: 0.6, AML: 0.2}",
@@ -26,7 +26,7 @@ def test_case_audit_aggregates_turns():
     audit.turns.append(
         TurnRecord(
             turn_index=1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             agent="hypothesis",
             message_role="out",
             content="x",
@@ -53,7 +53,7 @@ def test_case_audit_jsonl_format_with_turns():
     audit.turns.append(
         TurnRecord(
             turn_index=1,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             agent="hypothesis",
             message_role="out",
             content="hi",

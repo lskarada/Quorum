@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from quorum.orchestrator.agents.base import Agent
 from quorum.orchestrator.schemas import AgentMessage, AgentRole, CaseInput, NextTest

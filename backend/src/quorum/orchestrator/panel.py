@@ -17,8 +17,9 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING
 
 from quorum.llm.client import LLMClient
 from quorum.orchestrator.agents import (
@@ -384,9 +385,9 @@ class Panel:
 
     async def run_sequential(
         self,
-        case: "EvalCase",
+        case: EvalCase,
         gatekeeper,
-        audit_writer: "AuditWriter",
+        audit_writer: AuditWriter,
         *,
         max_turns: int = 30,
         commit_threshold: float = 0.70,
@@ -430,17 +431,17 @@ class Panel:
         # the transcript is just the panel's prior reasoning. Capping to the
         # most recent N messages keeps prompts cheap and avoids latent
         # validation failures from oversized context.
-        TRANSCRIPT_TAIL = 5
+        transcript_tail = 5
 
         for turn in range(1, max_turns + 1):
             case_input = self._build_sequential_case_input(case, revealed)
             iteration = turn - 1
-            tail = transcript[-TRANSCRIPT_TAIL:]
+            tail = transcript[-transcript_tail:]
 
             # ----- Hypothesis -----
             try:
                 hyp_msg = await self.hypothesis.deliberate(case_input, list(tail), iteration)
-            except Exception as exc:  # noqa: BLE001 — per-turn resilience
+            except Exception as exc:
                 audit_writer.record_turn(
                     agent="hypothesis", message_role="out",
                     content=f"(error: {exc.__class__.__name__}: {exc})",
@@ -490,7 +491,7 @@ class Panel:
                     cost_usd=tc_msg.cost_usd,
                     extra={"query": query},
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 audit_writer.record_turn(
                     agent="test_chooser", message_role="out",
                     content=f"(error: {exc.__class__.__name__}: {exc})",
@@ -542,7 +543,11 @@ class Panel:
                 chal_msg = await self.challenger.deliberate(case_input, list(tail), iteration)
                 transcript.append(chal_msg)
                 total_real_cost += chal_msg.cost_usd
-                chal_dict = chal_msg.structured_output if isinstance(chal_msg.structured_output, dict) else {}
+                chal_dict = (
+                    chal_msg.structured_output
+                    if isinstance(chal_msg.structured_output, dict)
+                    else {}
+                )
                 audit_writer.record_turn(
                     agent="challenger",
                     message_role="out",
@@ -551,20 +556,28 @@ class Panel:
                     cost_usd=chal_msg.cost_usd,
                     extra=dict(chal_dict),
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 audit_writer.record_turn(
                     agent="challenger", message_role="out",
                     content=f"(error: {exc.__class__.__name__}: {exc})",
                     extra={"error": True},
                 )
-                chal_dict = {"alternative_to_consider": "none", "against_top_candidate": [], "confidence_in_challenge": 0.0}
+                chal_dict = {
+                    "alternative_to_consider": "none",
+                    "against_top_candidate": [],
+                    "confidence_in_challenge": 0.0,
+                }
 
             # ----- Stewardship -----
             try:
                 stew_msg = await self.stewardship.deliberate(case_input, list(tail), iteration)
                 transcript.append(stew_msg)
                 total_real_cost += stew_msg.cost_usd
-                stew_dict = stew_msg.structured_output if isinstance(stew_msg.structured_output, dict) else {}
+                stew_dict = (
+                    stew_msg.structured_output
+                    if isinstance(stew_msg.structured_output, dict)
+                    else {}
+                )
                 audit_writer.record_turn(
                     agent="stewardship",
                     message_role="out",
@@ -573,7 +586,7 @@ class Panel:
                     cost_usd=stew_msg.cost_usd,
                     extra={k: v for k, v in stew_dict.items() if k != "cheaper_alternative"},
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 audit_writer.record_turn(
                     agent="stewardship", message_role="out",
                     content=f"(error: {exc.__class__.__name__}: {exc})",
@@ -586,7 +599,11 @@ class Panel:
                 chk_msg = await self.checklist.deliberate(case_input, list(tail), iteration)
                 transcript.append(chk_msg)
                 total_real_cost += chk_msg.cost_usd
-                chk_dict = chk_msg.structured_output if isinstance(chk_msg.structured_output, dict) else {}
+                chk_dict = (
+                    chk_msg.structured_output
+                    if isinstance(chk_msg.structured_output, dict)
+                    else {}
+                )
                 audit_writer.record_turn(
                     agent="checklist",
                     message_role="out",
@@ -595,7 +612,7 @@ class Panel:
                     cost_usd=chk_msg.cost_usd,
                     extra=dict(chk_dict),
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 audit_writer.record_turn(
                     agent="checklist", message_role="out",
                     content=f"(error: {exc.__class__.__name__}: {exc})",
@@ -661,7 +678,7 @@ class Panel:
             total_real_cost, revealed, reason="max turns reached",
         )
 
-    def _build_sequential_case_input(self, case: "EvalCase", revealed: list) -> CaseInput:
+    def _build_sequential_case_input(self, case: EvalCase, revealed: list) -> CaseInput:
         presentation = case.initial_presentation
         if revealed:
             lines = ["", "## Revealed findings"]
@@ -676,8 +693,8 @@ class Panel:
 
     def _finalize_forced(
         self,
-        case: "EvalCase",
-        audit_writer: "AuditWriter",
+        case: EvalCase,
+        audit_writer: AuditWriter,
         posterior: dict[str, float],
         n_turns: int,
         simulated_cost: float,

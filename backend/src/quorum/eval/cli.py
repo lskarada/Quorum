@@ -104,7 +104,7 @@ def run(
         if projected > cap and not confirm_cost:
             typer.echo(
                 f"WARNING: panel '{cfg.name}' cost_prior_usd="
-                f"${cfg.cost_prior_usd:.4f} × n={n} → projected ${projected:.2f} "
+                f"${cfg.cost_prior_usd:.4f} x n={n} -> projected ${projected:.2f} "
                 f"exceeds QUORUM_MAX_COST_USD=${cap:.2f}. "
                 f"Pass --confirm-cost to override."
             )
@@ -298,8 +298,8 @@ def ensemble(
         projected = len(cases) * prior
         if projected > cap and not confirm_cost:
             typer.echo(
-                f"WARNING: ensemble '{label}' cost_prior_usd=${prior:.4f} × "
-                f"n={len(cases)} → projected ${projected:.2f} exceeds "
+                f"WARNING: ensemble '{label}' cost_prior_usd=${prior:.4f} x "
+                f"n={len(cases)} -> projected ${projected:.2f} exceeds "
                 f"QUORUM_MAX_COST_USD=${cap:.2f}. Pass --confirm-cost to override."
             )
             raise typer.Exit(code=2)

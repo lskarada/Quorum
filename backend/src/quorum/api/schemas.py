@@ -5,8 +5,6 @@ HTTP surface. Keep them thin — the orchestrator schemas are the source of trut
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 from quorum.orchestrator.schemas import FinalVerdict
@@ -16,14 +14,14 @@ class DiagnoseRequest(BaseModel):
     """POST /api/diagnose request body."""
 
     presentation: str = Field(max_length=8000)
-    case_id: Optional[str] = Field(default=None, max_length=256)
+    case_id: str | None = Field(default=None, max_length=256)
     available_tests: list[str] = Field(default_factory=list)
-    budget_usd: Optional[float] = None
+    budget_usd: float | None = None
     max_iterations: int = 5
     # Optional panel config name. If absent, the API picks the default
     # (PanelConfig.list_available()[0]). The /api/panels endpoint enumerates
     # valid names.
-    panel: Optional[str] = Field(default=None, max_length=64)
+    panel: str | None = Field(default=None, max_length=64)
 
 
 class DiagnoseResponse(BaseModel):

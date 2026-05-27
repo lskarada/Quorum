@@ -16,7 +16,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-
 from quorum.audit.writer import AuditWriter
 from quorum.eval.eval_case import EvalCase, Finding
 from quorum.gatekeeper.gatekeeper import Gatekeeper
@@ -30,7 +29,6 @@ from quorum.orchestrator.schemas import (
     Differential,
     NextTest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,7 +107,11 @@ def _stewardship_msg(accept: bool = True) -> AgentMessage:
     )
 
 
-def _checklist_msg(consistent: bool = True, flags: list[str] | None = None, recommend_continue: bool = True) -> AgentMessage:
+def _checklist_msg(
+    consistent: bool = True,
+    flags: list[str] | None = None,
+    recommend_continue: bool = True,
+) -> AgentMessage:
     return AgentMessage(
         role=AgentRole.CHECKLIST,
         iteration=0,
@@ -184,7 +186,9 @@ async def test_run_sequential_commits_when_threshold_exceeded(toy_eval_case, tmp
     monkeypatch.setattr(gk, "_llm_match", _async_match_sequence([0, 1, 2]))
     writer = AuditWriter(root=tmp_path, run_id="t1", case_id=toy_eval_case.case_id, model="stub")
 
-    result = await panel.run_sequential(toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.7)
+    result = await panel.run_sequential(
+        toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.7
+    )
 
     assert isinstance(result, SequentialResult)
     assert result.committed_diagnosis == "SLE"
@@ -217,7 +221,9 @@ async def test_run_sequential_safety_blocks_premature_commit(toy_eval_case, tmp_
     monkeypatch.setattr(gk, "_llm_match", _async_match_sequence([0, 1, 2, -1, -1]))
     writer = AuditWriter(root=tmp_path, run_id="t2", case_id=toy_eval_case.case_id, model="stub")
 
-    result = await panel.run_sequential(toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.7)
+    result = await panel.run_sequential(
+        toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.7
+    )
 
     # The first 2 turns can't commit (n_findings < 3); commit only at turn 3.
     assert result.n_turns >= 3
@@ -245,7 +251,16 @@ async def test_run_sequential_records_audit_event_per_agent(toy_eval_case, tmp_p
     await panel.run_sequential(toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.7)
 
     agents_seen = {t.agent for t in writer.audit.turns}
-    assert {"hypothesis", "test_chooser", "challenger", "stewardship", "checklist", "gatekeeper", "safety_checker"} <= agents_seen
+    expected_agents = {
+        "hypothesis",
+        "test_chooser",
+        "challenger",
+        "stewardship",
+        "checklist",
+        "gatekeeper",
+        "safety_checker",
+    }
+    assert expected_agents <= agents_seen
 
 
 async def test_run_sequential_max_turns_forced_commit(toy_eval_case, tmp_path, monkeypatch):
@@ -263,13 +278,17 @@ async def test_run_sequential_max_turns_forced_commit(toy_eval_case, tmp_path, m
     monkeypatch.setattr(gk, "_llm_match", _async_match_sequence([0, 1, 2] + [-1] * 10))
     writer = AuditWriter(root=tmp_path, run_id="t4", case_id=toy_eval_case.case_id, model="stub")
 
-    result = await panel.run_sequential(toy_eval_case, gk, writer, max_turns=3, commit_threshold=0.7)
+    result = await panel.run_sequential(
+        toy_eval_case, gk, writer, max_turns=3, commit_threshold=0.7
+    )
     assert result.n_turns == 3
     assert result.committed_diagnosis == "SLE"  # top of low posterior
     assert result.forced is True
 
 
-async def test_run_sequential_stops_when_stewardship_rejects_and_safety_clean(toy_eval_case, tmp_path, monkeypatch):
+async def test_run_sequential_stops_when_stewardship_rejects_and_safety_clean(
+    toy_eval_case, tmp_path, monkeypatch
+):
     """If Stewardship returns accept_test=False (stop) AND safety clean → commit."""
     panel = _build_panel()
     # Mid posterior (below threshold) but stewardship votes stop.
@@ -288,7 +307,9 @@ async def test_run_sequential_stops_when_stewardship_rejects_and_safety_clean(to
     monkeypatch.setattr(gk, "_llm_match", _async_match_sequence([0, 1, 2]))
     writer = AuditWriter(root=tmp_path, run_id="t5", case_id=toy_eval_case.case_id, model="stub")
 
-    result = await panel.run_sequential(toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.99)
+    result = await panel.run_sequential(
+        toy_eval_case, gk, writer, max_turns=10, commit_threshold=0.99
+    )
     # Posterior never crosses 0.99 but stewardship vetoes after turn 3 → commit on turn 3.
     assert result.n_turns == 3
     assert result.committed_diagnosis == "SLE"

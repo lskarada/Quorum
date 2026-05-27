@@ -68,7 +68,7 @@ async def run_ensemble(
     prompt = prompt_template or _load_hypothesis_prompt()
     agent = HypothesisAgent(llm=llm, model=model)
     # Bypass disk read — the ensemble may use a held-out or custom prompt.
-    agent._prompt_template = prompt  # noqa: SLF001 — explicit injection
+    agent._prompt_template = prompt
 
     messages: list[AgentMessage] = []
     n_failed = 0
@@ -81,7 +81,7 @@ async def run_ensemble(
             messages.append(msg)
             total_cost += msg.cost_usd
             total_tokens += msg.tokens_used
-        except Exception as exc:  # noqa: BLE001 — fail-soft is the contract
+        except Exception as exc:
             n_failed += 1
             logger.warning(
                 "ensemble vote %d/%d failed for case %s: %s",
@@ -248,5 +248,7 @@ __all__ = [
 
 
 # Convenience for the CLI smoke-call helper; keeps asyncio out of the typer entry.
-def run_ensemble_sync(case: CaseInput, model: str, n_votes: int, llm: LLMClient) -> tuple[FinalVerdict, EnsembleStats]:
+def run_ensemble_sync(
+    case: CaseInput, model: str, n_votes: int, llm: LLMClient
+) -> tuple[FinalVerdict, EnsembleStats]:
     return asyncio.run(run_ensemble(case, model, n_votes, llm))

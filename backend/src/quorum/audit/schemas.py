@@ -6,8 +6,8 @@ record captures everything the agent, gatekeeper, or safety check did.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -40,16 +40,16 @@ class CaseAudit(BaseModel):
     case_id: str
     run_id: str
     model: str
-    panel_config_name: Optional[str] = None
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
+    panel_config_name: str | None = None
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    completed_at: datetime | None = None
     turns: list[TurnRecord] = Field(default_factory=list)
-    final_committed_diagnosis: Optional[str] = None
+    final_committed_diagnosis: str | None = None
     final_posterior: dict[str, float] = Field(default_factory=dict)
     simulated_cost_usd: float = 0.0
     real_cost_usd: float = 0.0
-    judge_score: Optional[Literal["full_credit", "partial_credit", "no_credit"]] = None
-    judge_rationale: Optional[str] = None
+    judge_score: Literal["full_credit", "partial_credit", "no_credit"] | None = None
+    judge_rationale: str | None = None
 
     def to_jsonl(self) -> str:
         header = self.model_copy(update={"turns": []}).model_dump_json()

@@ -22,7 +22,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
-
 from quorum.llm.client import LLMClient, LLMResponse
 from quorum.orchestrator.agents.hypothesis import HypothesisAgent
 from quorum.orchestrator.agents.test_chooser import TestChooserAgent
@@ -33,7 +32,6 @@ from quorum.orchestrator.schemas import (
     Differential,
     NextTest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -69,7 +67,7 @@ def _differential_json(candidates: list[dict], iteration: int = 0) -> str:
 
 def _three_candidates(posteriors: tuple[float, float, float] = (0.5, 0.3, 0.2)) -> list[dict]:
     names = ["Diagnosis Alpha", "Diagnosis Beta", "Diagnosis Gamma"]
-    return [_candidate(n, p) for n, p in zip(names, posteriors)]
+    return [_candidate(n, p) for n, p in zip(names, posteriors, strict=True)]
 
 
 # ---------------------------------------------------------------------------

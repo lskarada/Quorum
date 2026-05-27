@@ -6,13 +6,13 @@ and the frontend. Treat as a stable contract.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Literal, Optional, Union
+from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     HYPOTHESIS = "hypothesis"
     TEST_CHOOSER = "test_chooser"
     CHALLENGER = "challenger"
@@ -24,16 +24,16 @@ class Citation(BaseModel):
     """A primary-source citation backing an agent's claim."""
 
     source: str
-    title: Optional[str] = None
-    url: Optional[str] = None
-    excerpt: Optional[str] = Field(default=None, max_length=200)
+    title: str | None = None
+    url: str | None = None
+    excerpt: str | None = Field(default=None, max_length=200)
 
 
 class DiagnosisCandidate(BaseModel):
     """A single entry in the differential."""
 
     name: str
-    icd10: Optional[str] = None
+    icd10: str | None = None
     posterior: float = Field(ge=0.0, le=1.0)
     rationale: str
     supporting_findings: list[str] = Field(default_factory=list)
@@ -69,8 +69,8 @@ class NextTest(BaseModel):
 
     name: str
     rationale: str
-    estimated_cost_usd: Optional[float] = None
-    information_gain_estimate: Optional[float] = None
+    estimated_cost_usd: float | None = None
+    information_gain_estimate: float | None = None
     discriminates_between: list[str] = Field(default_factory=list)
     citations: list[Citation] = Field(default_factory=list)
 
@@ -81,7 +81,7 @@ class AgentMessage(BaseModel):
     role: AgentRole
     iteration: int
     content: str
-    structured_output: Optional[Union[Differential, NextTest, dict]] = None
+    structured_output: Differential | NextTest | dict | None = None
     citations: list[Citation] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     tokens_used: int = 0
@@ -91,19 +91,19 @@ class AgentMessage(BaseModel):
 class CaseInput(BaseModel):
     """Input to the orchestrator."""
 
-    case_id: Optional[str] = None
+    case_id: str | None = None
     presentation: str
     available_tests: list[str] = Field(default_factory=list)
-    budget_usd: Optional[float] = None
+    budget_usd: float | None = None
     max_iterations: int = 5
 
 
 class FinalVerdict(BaseModel):
     """Output of the orchestrator after deliberation concludes."""
 
-    case_id: Optional[str] = None
+    case_id: str | None = None
     final_differential: Differential
-    recommended_next_test: Optional[NextTest] = None
+    recommended_next_test: NextTest | None = None
     confidence: float = Field(ge=0.0, le=1.0)
     iterations_used: int
     total_tokens: int

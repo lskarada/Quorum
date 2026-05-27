@@ -10,7 +10,6 @@ Brier/ECE) can call without inlining a list comprehension.
 from __future__ import annotations
 
 import pytest
-
 from quorum.orchestrator.schemas import DiagnosisCandidate, Differential
 
 

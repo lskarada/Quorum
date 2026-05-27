@@ -27,7 +27,7 @@ export function NextTestCard({ verdict, nextTest }: NextTestCardProps) {
       <h3 className="font-semibold">Recommended next test</h3>
       <p className="text-sm font-medium">{next.name}</p>
       <p className="text-sm text-muted-foreground">{next.rationale}</p>
-      {next.estimated_cost_usd !== undefined && (
+      {next.estimated_cost_usd != null && (
         <p className="text-xs text-muted-foreground">
           Est. cost: ${next.estimated_cost_usd.toFixed(2)}
         </p>

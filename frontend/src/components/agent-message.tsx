@@ -14,7 +14,7 @@ export function AgentMessage({ message }: AgentMessageProps) {
   return (
     <div className="space-y-2">
       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-      {message.citations.length > 0 && (
+      {message.citations && message.citations.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {message.citations.map((c, idx) => (
             <Badge key={idx} variant="outline" title={c.title ?? c.source}>

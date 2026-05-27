@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from quorum.llm.client import LLMClient
 
-
 _GATEWAY = "https://gateway.ai.cloudflare.com/v1/test-account/test-gateway"
 
 

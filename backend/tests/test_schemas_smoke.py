@@ -5,11 +5,8 @@ backend tests that exercise real (non-stub) code in the scaffolding pass.
 """
 from __future__ import annotations
 
-import json
-
 import pytest
 from pydantic import ValidationError
-
 from quorum.orchestrator.schemas import (
     AgentMessage,
     AgentRole,

@@ -35,7 +35,7 @@ def compute_ece(
 
     confidences: list[float] = []
     correct: list[float] = []
-    for post, truth in zip(posteriors, truths):
+    for post, truth in zip(posteriors, truths, strict=True):
         if not post:
             continue
         top_label = max(post, key=post.get)
@@ -47,7 +47,7 @@ def compute_ece(
 
     total = len(confidences)
     bins: list[list[tuple[float, float]]] = [[] for _ in range(n_bins)]
-    for conf, acc in zip(confidences, correct):
+    for conf, acc in zip(confidences, correct, strict=True):
         idx = min(int(conf * n_bins), n_bins - 1)
         bins[idx].append((conf, acc))
 

@@ -93,7 +93,7 @@ async def run_arm_a(
                     max_turns=max_turns,
                     commit_threshold=commit_threshold,
                 )
-        except Exception as exc:  # noqa: BLE001 — best-effort capture per case
+        except Exception as exc:
             import traceback
             writer.record_turn(
                 agent="runner",
@@ -152,7 +152,7 @@ async def run_arm_b(
                 if verdict.final_differential.candidates
                 else None
             )
-            top_name, top_p = (top[0], top[1]) if top else ("(no diagnosis)", 0.0)
+            top_name, _top_p = (top[0], top[1]) if top else ("(no diagnosis)", 0.0)
             posterior = verdict.final_differential.as_posterior_dict()
             writer.record_turn(
                 agent="hypothesis",
@@ -168,7 +168,7 @@ async def run_arm_b(
                 real_cost_usd=verdict.total_cost_usd,
                 simulated_cost_usd=0.0,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             writer.audit.final_committed_diagnosis = f"(error: {exc.__class__.__name__})"
         writer.close()
 

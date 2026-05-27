@@ -2,10 +2,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock
-
-import pytest
 
 from quorum.audit.writer import AuditWriter
 from quorum.eval.eval_case import EvalCase
