@@ -482,6 +482,14 @@ class Panel:
                     and hasattr(tc_msg.structured_output, "name")
                     else ""
                 )
+                audit_writer.record_turn(
+                    agent="test_chooser",
+                    message_role="out",
+                    content=tc_msg.content,
+                    tokens=tc_msg.tokens_used,
+                    cost_usd=tc_msg.cost_usd,
+                    extra={"query": query},
+                )
             except Exception as exc:  # noqa: BLE001
                 audit_writer.record_turn(
                     agent="test_chooser", message_role="out",
@@ -489,15 +497,6 @@ class Panel:
                     extra={"error": True},
                 )
                 query = ""  # let Gatekeeper return "not available"
-                tc_msg = None
-            audit_writer.record_turn(
-                agent="test_chooser",
-                message_role="out",
-                content=tc_msg.content,
-                tokens=tc_msg.tokens_used,
-                cost_usd=tc_msg.cost_usd,
-                extra={"query": query},
-            )
 
             # ----- Gatekeeper -----
             audit_writer.record_turn(
