@@ -24,10 +24,9 @@ The orchestrator-specific rule is captured in `.claude/rules/no-orchestrator-log
 - Key runtime deps (see `backend/pyproject.toml` for the canonical list): `anthropic`, `openai`, `google-genai`, `fastapi`, `uvicorn[standard]`, `pydantic>=2`, `mcp>=1.0.0`, `sse-starlette`, `httpx`, `typer`.
 - Dev deps: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`.
 
-**Cloudflare (4th LLM provider + observability)**
-- **Workers AI** is the 4th provider, sitting alongside Anthropic/OpenAI/Google. Hosts open-source models (Llama, Mistral) for the "open panel vs closed panel" comparison arm of the eval. HTTP-only — uses the existing `httpx` dependency; no new Python package.
-- **AI Gateway** (optional) routes all 4 providers through a single Cloudflare-managed URL for caching, observability, and rate-limit dashboards. Set `CLOUDFLARE_AI_GATEWAY_URL` to enable. Strongly recommended for eval runs because cached responses make re-runs essentially free.
-- **Compute envelope**: $50K Workers AI cap inside the $100K Cloudflare for Startups total; available for 1 year. At expected eval volume (304 cases × 5 agents × ~5 iterations ≈ 7,600 calls) this is comfortably under the cap.
+**Cloudflare AI Gateway (optional routing layer)**
+- **AI Gateway** (optional) routes the three providers (Anthropic / OpenAI / Google, all reached via OpenRouter) through a single Cloudflare-managed URL for caching, observability, and rate-limit dashboards. Set `CLOUDFLARE_AI_GATEWAY_URL` to enable. Strongly recommended for eval runs because cached responses make re-runs essentially free.
+- **Workers AI as a 4th provider is out of scope** for this build (struck 2026-05-24 — see decision note in `docs/superpowers/specs/2026-05-23-quorum-completion-design.md`). The eval comparison arm is therefore "single-vendor vs mixed-vendor" rather than "open panel vs closed panel".
 
 **Node (frontend)**
 - Node 20+, package manager `pnpm`.
@@ -62,7 +61,7 @@ After any meaningful change, run the relevant gate:
 
 ```bash
 # Backend
-cd backend && uv sync && uv run pytest -q
+cd backend && uv sync --extra dev && uv run pytest -q
 
 # Frontend
 cd frontend && pnpm install && pnpm lint && pnpm tsc --noEmit && pnpm vitest run
@@ -73,6 +72,14 @@ cd backend && uv run python scripts/dump_schemas.py
 
 # Full acceptance (mirrors README §8)
 cd backend && uv run pytest tests/test_acceptance.py -q
+
+# Run eval (~$0.05 for 3 cases with dev_cheap, $5-10 for 100 cases with premium)
+cd backend && uv run quorum-eval run --corpus medqa --panel dev_cheap --n 3
+cd backend && uv run quorum-eval score <results_dir> --corpus medqa
+cd backend && uv run quorum-eval report <results_dir> --corpus medqa
+
+# MCP server (stdio)
+cd backend && uv run python -m quorum.mcp_server.server
 ```
 
 ## Repository topology
@@ -124,13 +131,33 @@ When working in this repo, especially as a subagent:
 
 | Phase | Status |
 |-------|--------|
-| Scaffolding (this pass) | In progress |
-| Orchestrator logic | Not started |
-| Prompt engineering | Not started |
-| Eval corpus curation | Not started |
+| Scaffolding | Complete |
+| Vertical slice (Hypothesis + Panel + SSE + frontend transcript) | Complete |
+| Five agents (Hypothesis/TestChooser/Challenger/Stewardship/Checklist) | Complete |
+| Multi-agent consensus loop (3 termination paths, parallel Challenger\|\|Stewardship) | Complete |
+| YAML panel configs + per-panel `cost_prior_usd` calibration | Complete |
+| Compare runner + /api/compare/stream | Complete |
+| Polished frontend (multi-iter transcript + /compare route) | Complete |
+| Frontend type codegen from Pydantic schema (`pnpm gen:types`) | Complete (2026-05-24) |
+| Cloudflare AI Gateway routing for the 3 vendors (env-flagged) | Complete (2026-05-24) |
+| Eval harness (corpus loaders, runner, scorer with McNemar+Wilcoxon, CLI) | Complete |
+| MCP stdio server (diagnose_case tool) | Complete |
+| Headline eval — lean A/B (dev_cheap vs baseline_single_call, n=30 MedQA) | Complete (2026-05-24) |
+| Headline eval with premium panels (single_model_premium, mixed_vendor) | Deferred — budget gate; see `docs/results.md` Limitations |
 | Demo video | Not started |
 
 See `docs/milestone.md` for the CS153 Week 7 deliverable.
+
+## Latest results
+
+Headline numbers from the 2026-05-24 lean A/B run live in
+[`docs/results.md`](docs/results.md). Top line: `baseline_single_call`
+(claude-opus-4 alone) reaches 26.7% top-1 vs `dev_cheap`'s 16.7% at
+n=30 on MedQA; paired McNemar p=0.248 (not significant at α=0.05).
+Methodological caveats (MedQA answer-field heterogeneity and the
+intermittent haiku-4-5 JSON parse issue driving dev_cheap's error rate)
+are documented in the results doc and in
+[`docs/eval_methodology.md`](docs/eval_methodology.md).
 
 ## License
 

@@ -1,19 +1,25 @@
 import { Card } from "@/components/ui/card";
-import type { FinalVerdict } from "@/lib/types";
+import type { FinalVerdict, NextTest } from "@/lib/types";
 
 interface NextTestCardProps {
   verdict: FinalVerdict | null;
+  nextTest?: NextTest | null;
 }
 
 /**
- * Right-rail recommended next test, surfaced from FinalVerdict.recommended_next_test.
+ * Right-rail recommended next test.
+ *
+ * Sources, in priority order:
+ *   1. The `nextTest` prop, set by Diagnose.tsx from the test_chooser
+ *      `agent_complete` SSE event (Phase 3).
+ *   2. `verdict.recommended_next_test`, populated by Panel when present.
  *
  * TODO (visual pass):
  *   - Highlight cost when budget_usd was set on the case input
  *   - Show "discriminates between" as inline candidate chips
  */
-export function NextTestCard({ verdict }: NextTestCardProps) {
-  const next = verdict?.recommended_next_test;
+export function NextTestCard({ verdict, nextTest }: NextTestCardProps) {
+  const next = nextTest ?? verdict?.recommended_next_test;
   if (!next) return null;
 
   return (

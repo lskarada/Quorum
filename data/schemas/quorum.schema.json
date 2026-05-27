@@ -1062,10 +1062,21 @@
             "consensus",
             "budget",
             "max_iterations",
+            "checklist_stop",
             "error"
           ],
           "title": "Termination Reason",
           "type": "string"
+        },
+        "schema_version": {
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "is_error": {
+          "default": false,
+          "title": "Is Error",
+          "type": "boolean"
         }
       },
       "required": [

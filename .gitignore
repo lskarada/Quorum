@@ -41,10 +41,33 @@ dist/
 # Data (commit schemas, not contents)
 data/cases/nejm/*.json
 data/cases/medqa/*.json
+data/cases/cupcase/*.json
+data/cases/mcr/*.json
+# v2 corpus: NEJM cases are paywalled — do NOT commit the JSON bodies.
+# MCR (MIT) and RareBench (Apache 2.0) JSON bodies ARE committed.
+# Splits.json is committed (just case-IDs, no copyrighted content).
+data/cases/eval_corpus_v2/nejm_sample.json
+!data/cases/eval_corpus_v2/mcr_sample.json
+!data/cases/eval_corpus_v2/rarebench_sample.json
+!data/cases/eval_corpus_v2/splits.json
+!data/cases/eval_corpus_v2/README.md
 !data/cases/**/_schema.json
 data/results/*.json
+data/results/*/
+data/results/.spend_total.txt
+data/results/.spend_ledger.tsv
+data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep
+# v2 benchmark attribution + diagnostics artifacts (small JSON summaries,
+# not raw per-case data). Committed so a reviewer can reproduce phase 6
+# tables without re-running the $20+ benchmark.
+!data/results/v1_baseline_frozen.json
+!data/results/v2_*.json
+!data/results/v2_*.jsonl
+!data/results/v2_*.md
+!data/results/ensemble_cost_priors/
+!data/results/ensemble_cost_priors/*.json
 
 # data/schemas/quorum.schema.json IS committed — it's the generated
 # Pydantic↔TypeScript parity contract. Regenerate with:

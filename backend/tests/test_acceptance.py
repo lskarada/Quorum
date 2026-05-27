@@ -56,20 +56,9 @@ def test_backend_panel_importable():
     from quorum.orchestrator.panel import Panel  # noqa: F401
 
 
-@pytest.mark.parametrize(
-    "module_path",
-    [
-        "quorum.llm.providers.anthropic_provider",
-        "quorum.llm.providers.openai_provider",
-        "quorum.llm.providers.google_provider",
-        "quorum.llm.providers.workers_ai_provider",
-    ],
-)
-def test_llm_provider_importable(module_path: str):
-    """All four provider stubs must exist and import cleanly."""
-    import importlib
-
-    importlib.import_module(module_path)
+# Phase 1: the four single-provider stubs (anthropic/openai/google/workers_ai)
+# were collapsed into a single OpenRouter-routed LLMClient. The per-module
+# importable contract no longer applies; coverage moved to test_llm_client.py.
 
 
 # --- Data --------------------------------------------------------------------
@@ -233,6 +222,9 @@ def test_anti_hallucination_flag_only_in_expected_files():
             continue
         # Subagent rules / prompts may mention it; allow under .claude/.
         if "/.claude/" in line:
+            continue
+        # Plan documents under docs/superpowers/plans/ describe the protocol; allow.
+        if "/docs/superpowers/plans/" in line:
             continue
         if "/research/papers/" in line or "/research/" in line:
             continue

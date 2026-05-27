@@ -1,25 +1,45 @@
-"""Quorum exposed as an MCP server.
-
-Any MCP-speaking agent (Claude Code, Claude Desktop, etc.) can call
-the `diagnose_case` tool to get a structured differential.
-"""
+"""Quorum MCP stdio server exposing diagnose_case."""
 from __future__ import annotations
 
-# TODO: the exact MCP Python SDK API surface (`mcp>=1.0.0`) uses decorator-based
-# tool registration via `@server.list_tools()` and `@server.call_tool()`, not the
-# imperative `server.add_tool()` shown in early design drafts. Wire it up against
-# the installed SDK; see https://github.com/modelcontextprotocol/python-sdk for
-# the current pattern.
+import asyncio
+import json
+
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import TextContent, Tool
+
+from .tools import (
+    DIAGNOSE_CASE_INPUT_SCHEMA,
+    DIAGNOSE_CASE_TOOL_NAME,
+    diagnose_case_tool,
+)
+
+server = Server("quorum")
+
+
+@server.list_tools()
+async def _list_tools() -> list[Tool]:
+    return [
+        Tool(
+            name=DIAGNOSE_CASE_TOOL_NAME,
+            description="Run the Quorum diagnostic panel against a case presentation.",
+            inputSchema=DIAGNOSE_CASE_INPUT_SCHEMA,
+        )
+    ]
+
+
+@server.call_tool()
+async def _call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name != DIAGNOSE_CASE_TOOL_NAME:
+        raise ValueError(f"Unknown tool: {name}")
+    result = await diagnose_case_tool(arguments)
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
 async def main() -> None:
-    """Run the MCP server over stdio (standard for local MCP)."""
-    # TODO: import mcp.server.Server + mcp.server.stdio.stdio_server, register
-    # the diagnose_case tool, and run the event loop over stdio.
-    raise NotImplementedError
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":
-    import asyncio
-
     asyncio.run(main())

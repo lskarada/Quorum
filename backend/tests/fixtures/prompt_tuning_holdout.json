@@ -1,0 +1,14 @@
+{
+  "description": "Held-out MedQA case IDs reserved for prompt tuning (Phase 6). The headline eval (Phase 7) MUST exclude these via the --exclude flag.",
+  "corpus": "medqa",
+  "case_ids": [
+    "medqa_0050",
+    "medqa_0051",
+    "medqa_0052",
+    "medqa_0053",
+    "medqa_0054",
+    "medqa_0055",
+    "medqa_0056"
+  ],
+  "created_at": "2026-05-24"
+}

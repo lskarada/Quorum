@@ -15,13 +15,19 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
+    "pyyaml>=6.0.2",
     "mcp>=1.0.0",
     "sse-starlette>=2.1.0",
     "httpx>=0.27.0",
     "rich>=13.9.0",
+    "scipy>=1.14.0",
+    "statsmodels>=0.14.0",
     "typer>=0.13.0",
     "python-dotenv>=1.0.0",
 ]
+
+[project.scripts]
+quorum-eval = "quorum.eval.cli:app"
 
 [project.optional-dependencies]
 dev = [

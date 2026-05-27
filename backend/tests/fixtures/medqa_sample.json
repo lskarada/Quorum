@@ -1,0 +1,98 @@
+[
+  {
+    "id": "medqa_synth_001",
+    "question": "A 22-year-old man presents with sudden onset of severe chest pain and shortness of breath after a coughing fit. He is tall and thin. Vital signs show HR 110, BP 124/76, RR 24, SpO2 91% on room air. Breath sounds are diminished on the right side with hyperresonance to percussion. Which of the following is the most likely diagnosis?",
+    "options": {
+      "A": "Acute myocardial infarction",
+      "B": "Pulmonary embolism",
+      "C": "Spontaneous pneumothorax",
+      "D": "Aortic dissection",
+      "E": "Pneumonia"
+    },
+    "answer_idx": "C"
+  },
+  {
+    "id": "medqa_synth_002",
+    "question": "A 65-year-old woman with poorly controlled hypertension presents with sudden severe tearing chest pain radiating to the back. BP is 200/110 in the right arm and 160/90 in the left arm. Chest X-ray shows a widened mediastinum. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Acute pericarditis",
+      "B": "Aortic dissection",
+      "C": "Tension pneumothorax",
+      "D": "Esophageal rupture",
+      "E": "Acute pancreatitis"
+    },
+    "answer_idx": "B"
+  },
+  {
+    "id": "medqa_synth_003",
+    "question": "A 28-year-old woman presents with three months of fatigue, joint pain in her hands and knees, and a butterfly-shaped rash on her face that worsens with sun exposure. Labs show pancytopenia and positive ANA. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Rheumatoid arthritis",
+      "B": "Systemic lupus erythematosus",
+      "C": "Dermatomyositis",
+      "D": "Psoriatic arthritis",
+      "E": "Lyme disease"
+    },
+    "answer_idx": "B"
+  },
+  {
+    "id": "medqa_synth_004",
+    "question": "A 70-year-old man presents with progressive memory loss over two years, difficulty managing finances, and getting lost in familiar places. Mini-mental status exam shows score of 18/30. MRI shows hippocampal atrophy. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Vascular dementia",
+      "B": "Frontotemporal dementia",
+      "C": "Lewy body dementia",
+      "D": "Alzheimer disease",
+      "E": "Normal pressure hydrocephalus"
+    },
+    "answer_idx": "D"
+  },
+  {
+    "id": "medqa_synth_005",
+    "question": "A 45-year-old woman presents with intermittent right upper quadrant pain after fatty meals, lasting several hours. She has had three similar episodes. Ultrasound reveals multiple gallstones without wall thickening or pericholecystic fluid. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Acute cholecystitis",
+      "B": "Biliary colic",
+      "C": "Choledocholithiasis",
+      "D": "Pancreatitis",
+      "E": "Peptic ulcer disease"
+    },
+    "answer_idx": "B"
+  },
+  {
+    "id": "medqa_synth_006",
+    "question": "A 6-year-old boy presents with a 2-day history of barking cough, hoarseness, and inspiratory stridor at night. He has had low-grade fever. Lateral neck X-ray shows subglottic narrowing (steeple sign). Which is the most likely diagnosis?",
+    "options": {
+      "A": "Epiglottitis",
+      "B": "Bacterial tracheitis",
+      "C": "Croup",
+      "D": "Foreign body aspiration",
+      "E": "Peritonsillar abscess"
+    },
+    "answer_idx": "C"
+  },
+  {
+    "id": "medqa_synth_007",
+    "question": "A 35-year-old woman presents with heat intolerance, palpitations, 10-pound weight loss, and a fine tremor over the last 2 months. Exam reveals exophthalmos and a diffuse goiter. TSH is suppressed and free T4 is markedly elevated. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Toxic multinodular goiter",
+      "B": "Subacute thyroiditis",
+      "C": "Graves disease",
+      "D": "Hashimoto thyroiditis",
+      "E": "Pituitary adenoma"
+    },
+    "answer_idx": "C"
+  },
+  {
+    "id": "medqa_synth_008",
+    "question": "A 4-month-old infant presents with poor feeding, profuse sweating during feeds, and failure to thrive. Exam reveals a harsh holosystolic murmur at the lower left sternal border. Echocardiogram demonstrates a single large defect in the membranous portion of the interventricular septum. Which is the most likely diagnosis?",
+    "options": {
+      "A": "Atrial septal defect",
+      "B": "Tetralogy of Fallot",
+      "C": "Patent ductus arteriosus",
+      "D": "Ventricular septal defect",
+      "E": "Coarctation of the aorta"
+    },
+    "answer_idx": "D"
+  }
+]

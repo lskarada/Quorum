@@ -1,0 +1,32 @@
+[
+  {
+    "case_id": "mcr_synth_001",
+    "presentation": "A 58-year-old woman with a 6-month history of progressive proximal muscle weakness, heliotrope rash on the eyelids, and Gottron papules over the MCP joints. CK elevated to 4200 U/L. ANA positive.",
+    "final_diagnosis": "Dermatomyositis",
+    "reasoning": "Classic triad of proximal weakness + heliotrope rash + Gottron papules with elevated CK is pathognomonic for dermatomyositis."
+  },
+  {
+    "case_id": "mcr_synth_002",
+    "presentation": "A 24-year-old man with sudden-onset bilateral vision loss, urinary retention, and lower-extremity weakness over 3 days. MRI shows longitudinal extensive transverse myelitis spanning T4-T10 plus optic nerve enhancement.",
+    "final_diagnosis": "Neuromyelitis optica spectrum disorder",
+    "reasoning": "Longitudinally extensive transverse myelitis combined with optic neuritis is the hallmark of NMOSD."
+  },
+  {
+    "case_id": "mcr_synth_003",
+    "presentation": "A 45-year-old construction worker with progressive dyspnea, dry cough, finger clubbing over 18 months. HRCT: peripheral, basal-predominant reticular opacities with honeycombing.",
+    "final_diagnosis": "Idiopathic pulmonary fibrosis",
+    "reasoning": "UIP pattern on HRCT (basal-predominant reticular + honeycombing) in older patient without secondary cause is IPF."
+  },
+  {
+    "case_id": "mcr_synth_004",
+    "presentation": "A 67-year-old man with isolated diastolic dysfunction, low-voltage ECG, monoclonal gammopathy on SPEP, and bilateral carpal tunnel history.",
+    "final_diagnosis": "Cardiac amyloidosis (AL type)",
+    "reasoning": "Low-voltage ECG despite LV hypertrophy + monoclonal protein + carpal tunnel triad strongly suggests AL amyloid."
+  },
+  {
+    "case_id": "mcr_synth_005",
+    "presentation": "A 32-year-old woman with episodic palpitations, headache, and diaphoresis, with paroxysmal hypertensive episodes to 220/130. Plasma metanephrines elevated 10-fold.",
+    "final_diagnosis": "Pheochromocytoma",
+    "reasoning": "Classic triad (palpitations, headache, sweating) with paroxysmal HTN and dramatically elevated metanephrines is pheo until proven otherwise."
+  }
+]

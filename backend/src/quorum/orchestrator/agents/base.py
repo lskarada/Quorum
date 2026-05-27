@@ -22,8 +22,9 @@ class Agent(ABC):
 
     role: AgentRole
 
-    def __init__(self, llm: LLMClient):
+    def __init__(self, llm: LLMClient, model: str | None = None):
         self.llm = llm
+        self.model = model  # None → llm.default_model is used by self.llm.complete
         self._prompt_template: str | None = None
 
     @property
@@ -31,10 +32,7 @@ class Agent(ABC):
         """Lazy-load the prompt template from disk on first access."""
         if self._prompt_template is None:
             path = PROMPTS_DIR / f"{self.role.value}.md"
-            # TODO: read and return prompt template content
-            raise NotImplementedError(
-                f"prompt_template loader not implemented for {self.role.value}"
-            )
+            self._prompt_template = path.read_text(encoding="utf-8")
         return self._prompt_template
 
     @abstractmethod

@@ -1,35 +1,46 @@
-# Demo Script — 3-minute video
+# Demo Script — 3–5 minute video
 
-## 0:00–0:20 — Hook
-Anj's "Safety, Policy, Governance / Models & Agents" slide. Cut to Quorum landing page.
-Voiceover: "Microsoft's MAI-DxO hit 85.5% on NEJM cases. It's closed. Quorum is the open
-version, callable as MCP, with the debate streamed live."
+## 0:00–0:30 — Hook
 
-## 0:20–1:40 — Live demo
-Paste an NEJM-style case into the demo. Hit "Begin deliberation."
-- Five agent cards light up in sequence.
-- Hypothesis proposes a ranked differential (Top-3 displayed with posteriors).
-- Test-Chooser picks the cheapest discriminating test.
-- Challenger attacks the top hypothesis.
-- Stewardship enforces cost-aware reasoning.
-- Checklist green-lights consistency.
-- Round 2 begins; differential shifts.
-- After 2-3 rounds, verdict displayed with citations.
+"MAI-DxO hit 85.5% on NEJM. Microsoft kept it closed. Quorum is the
+open version, and here's a thing they didn't show: panel composition
+matters."
 
-## 1:40–2:20 — Architecture
-One clean diagram. FastAPI + MCP server + Vite/React frontend. Five-agent panel. SSE stream.
-"Built by one undergrad in 17 days."
+## 0:30–1:30 — Live single-panel demo (dev_cheap)
 
-## 2:20–3:00 — Numbers + vision
-Comparison table:
-- Off-the-shelf Claude Opus 4.7: TBD
-- Off-the-shelf GPT-5: TBD
-- Off-the-shelf Llama-3.3-70b (Cloudflare Workers AI): TBD
-- Quorum panel — closed members (Opus/GPT-5/Gemini): TBD
-- Quorum panel — open members (Llama/Mistral via Workers AI): TBD
-- MAI-DxO reported: 85.5%
-- Random baseline: ~5%
+Paste a case at `/diagnose`. Five agent cards light up across
+iterations:
 
-"Any clinical AI agent ships into a market that needs diagnostic depth. MAI-DxO
-proved this works. Quorum is the open version anyone can call — and the
-open-models-as-a-panel result is the part that doesn't exist anywhere yet."
+- **Hypothesis** — Top-3 differential with posteriors.
+- **TestChooser** — discriminating next test.
+- **Challenger** — attack on the top hypothesis.
+- **Stewardship** — cost-aware judgment.
+- **Checklist** — contradiction scan.
+
+Round 2 begins; the differential shifts. Verdict in 2–3 iterations.
+
+## 1:30–2:30 — Compare-mode demo at `/compare`
+
+Same case, two panels (`dev_cheap` vs `baseline_single_call`). Both
+columns stream concurrently. Side-by-side verdict summary at the
+bottom highlights agreement and disagreement.
+
+## 2:30–3:30 — Eval numbers
+
+Show `docs/results.md` table. The headline ablation is
+**5-agent debate (`dev_cheap`)** vs **single-call baseline
+(`baseline_single_call`, all Opus)** on MedQA at n=30, scored with
+paired McNemar on top-1 and Wilcoxon on MRR. Premium-tier panels
+(`single_model_premium`, `mixed_vendor`) are documented but were not
+run in this release for budget reasons — see results.md Limitations.
+
+## 3:30–4:30 — Architecture + MCP + open repo
+
+One slide: FastAPI + Vite/React frontend + MCP stdio + OpenRouter
+routing + YAML panel configs. "Built solo in 17 days. MIT-licensed.
+Callable as MCP from Claude Desktop or Claude Code."
+
+## 4:30–5:00 — Close
+
+Repo URL + "Try it: clone, `uv sync`, `pnpm dev`. Bring your own
+OpenRouter key."

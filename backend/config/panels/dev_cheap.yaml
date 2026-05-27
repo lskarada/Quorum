@@ -1,0 +1,22 @@
+name: dev_cheap
+description: Mid-tier models for development, debugging, /goal loops. Mirrors mixed_vendor's
+  diversity structure at ~10-20x lower cost. SWAP TO single_model_premium OR mixed_vendor
+  FOR FINAL HEADLINE EVAL.
+max_iterations: 3
+consensus_threshold: 0.6
+hypothesis:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+test_chooser:
+  model: google/gemini-2.5-flash
+  temperature: 0.0
+challenger:
+  model: openai/gpt-4o-mini
+  temperature: 0.0
+stewardship:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+checklist:
+  model: meta-llama/llama-3.3-70b-instruct
+  temperature: 0.0
+cost_prior_usd: 0.008921

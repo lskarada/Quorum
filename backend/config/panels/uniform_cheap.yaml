@@ -1,0 +1,22 @@
+name: uniform_cheap
+description: 5-agent debate with anthropic/claude-haiku-4-5 in every slot. Cheap-tier
+  5-agent cell for the v2 tier-matched ablation grid; isolates debate uplift from
+  cross-vendor diversity (compare against dev_cheap).
+max_iterations: 3
+consensus_threshold: 0.6
+hypothesis:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+test_chooser:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+challenger:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+stewardship:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+checklist:
+  model: anthropic/claude-haiku-4-5
+  temperature: 0.0
+cost_prior_usd: 0.015289

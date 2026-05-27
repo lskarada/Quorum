@@ -47,6 +47,22 @@ class Differential(BaseModel):
     candidates: list[DiagnosisCandidate]
     iteration: int = 0
 
+    def as_posterior_dict(self) -> dict[str, float]:
+        """Project the candidates into a {dx_name: posterior} dict.
+
+        Used by Phase 5 run_sequential, SafetyChecker, and the Brier/ECE
+        calibration metrics. HypothesisAgent auto-normalizes posteriors
+        to sum ~1.0 at deliberation time, so callers can treat the dict
+        as a proper probability distribution.
+        """
+        return {c.name: c.posterior for c in self.candidates}
+
+    def top_diagnosis(self) -> tuple[str, float] | None:
+        if not self.candidates:
+            return None
+        top = max(self.candidates, key=lambda c: c.posterior)
+        return top.name, top.posterior
+
 
 class NextTest(BaseModel):
     """A recommended next diagnostic test."""
@@ -93,7 +109,11 @@ class FinalVerdict(BaseModel):
     total_tokens: int
     total_cost_usd: float
     transcript: list[AgentMessage]
-    termination_reason: Literal["consensus", "budget", "max_iterations", "error"]
+    termination_reason: Literal[
+        "consensus", "budget", "max_iterations", "checklist_stop", "error"
+    ]
+    schema_version: int = 1
+    is_error: bool = False
 
 
 class StreamEvent(BaseModel):

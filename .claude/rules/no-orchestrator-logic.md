@@ -1,37 +1,48 @@
-# Rule: no orchestrator implementation in scaffolding pass
+# Rule: orchestrator scope by phase
 
 <important if="touching backend/src/quorum/orchestrator/**">
 
-This file is auto-loaded when any file under `backend/src/quorum/orchestrator/` is edited. It overrides the default tendency to "be helpful" by filling in working implementations.
+This file is auto-loaded when any file under `backend/src/quorum/orchestrator/` is edited. The vertical-slice freeze has been lifted for the **Approach-B build phase** (see `docs/superpowers/specs/2026-05-23-quorum-completion-design.md`). New, broader scope below.
 
-## What is allowed
+## Currently authorized for implementation
 
-- Module/class/function **docstrings** describing the contract.
-- **Pydantic schemas** in `schemas.py` (full content — schemas ARE the contract).
-- **Type-annotated function signatures** with no body, or a body of `raise NotImplementedError` / `...` / `# TODO: ...`.
-- **Imports** required for the signatures to type-check.
-- Prompt template files in `prompts/*.md` — **skeleton only** with a header, role description, input list, output JSON shape, and a TODO marker for behavioral guidelines.
+- `agents/hypothesis.py` — `deliberate()` is done; may be extended to consume prior-iteration transcript history. `deliberate_stream()` remains optional (only implement if a streaming-token UI requires it).
+- `agents/test_chooser.py`, `agents/challenger.py`, `agents/stewardship.py`, `agents/checklist.py` — implement `deliberate()` against the structured-output contract in `schemas.py`. `deliberate_stream()` optional.
+- `panel.py` — full multi-iteration consensus loop. Termination on `top_posterior > consensus_threshold`, `iteration >= max_iterations`, OR `checklist.recommend_continue == False`.
+- `comparison_runner.py` (new) — runs two named panels in parallel against the same case; multiplexes SSE events tagged with `panel_id`.
+- `panel_config.py` (new) — loads YAML configs from `backend/config/panels/*.yaml`; each agent's model is config-driven.
+- `schemas.py` — canonical; only extend with new fields if compare-mode or panel-config require them.
+- `prompts/hypothesis.md` — production content may be iterated.
+- `prompts/{test_chooser,challenger,stewardship,checklist}.md` — production content (no longer skeletons).
 
-## What is forbidden
+## Forbidden in all cases
 
-- Any actual LLM call inside an agent's `deliberate()` or `deliberate_stream()`.
-- Any actual deliberation loop in `Panel.diagnose()` or `Panel.diagnose_stream()`.
-- Any heuristic or rules-based "stand-in" implementation. If you can't help yourself, write `raise NotImplementedError`, not a hand-rolled stub that "kind of" works.
-- Any production prompt text. Bullet skeletons in `prompts/*.md` are fine. Multi-paragraph prompt content is not.
-- Any new agent class beyond the five named in the brief.
+- Hand-rolled "stand-in" stubs that pretend to be implementations. If not implementing, write `raise NotImplementedError`.
+- New agent classes beyond the five in the brief. The five-agent structure is the architectural contract.
+- New runtime dependencies outside the pins in `backend/pyproject.toml`. PyYAML must be added explicitly if it is not already present — verify before importing.
+- Hardcoding model assignments inside agent classes. Models come from `PanelConfig` only.
+- Filling `data/cases/**/*.json` with synthetic LLM-generated cases without an explicit `synthetic: true` field in the JSON.
 
-## Why
+## Why this scope
 
-The scope is locked because (a) the orchestrator design is the core thesis of the project and requires careful prompt-engineering iteration that should NOT happen in a scaffolding pass, and (b) silent half-implementations break the "all stub tests assert `raises NotImplementedError`" contract used to catch unintended drift.
+The vertical slice proved the full pipe (UI ↔ SSE ↔ FastAPI ↔ Panel ↔ Hypothesis ↔ LLM). Approach B builds the remaining four agents, the multi-iter consensus loop, the comparison runner that enables the single-model-vs-mixed-vendor A/B story, and the eval harness that scores against public clinical case datasets. See the design doc for the full plan and per-phase gates.
 
-If you believe the contract should change, surface the request to the main thread. Do not edit through it.
+If you believe this contract should change, surface to the main thread. Do not edit through it.
 
 ## Verification
 
-Stub tests under `backend/tests/test_*_stub.py` assert that each agent's `deliberate()` raises `NotImplementedError`. If those tests go green without raising, something was implemented that shouldn't have been.
-
 ```bash
-cd backend && uv run pytest tests/ -q -k "stub"
+# All agents: tests must pass without NotImplementedError asserts
+cd backend && uv run pytest tests/test_agents.py -v
+
+# Multi-iter panel: tests cover consensus termination paths
+cd backend && uv run pytest tests/test_panel.py -v
+
+# Compare runner: side-by-side execution + isolation under failure
+cd backend && uv run pytest tests/test_comparison.py -v
+
+# Schemas still round-trip
+cd backend && uv run python scripts/dump_schemas.py
 ```
 
 </important>

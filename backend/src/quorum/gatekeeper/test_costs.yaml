@@ -1,0 +1,70 @@
+# Simulated test costs in USD, modeled on CMS allowable charges.
+# Categories match Gatekeeper finding categories.
+# Default cost for an unrecognized query is $0 (no penalty for asking).
+
+labs:
+  cbc: 11
+  cmp: 12
+  bmp: 8
+  lft: 14
+  coagulation_panel: 18
+  urinalysis: 5
+  blood_culture: 32
+  esr: 8
+  crp: 14
+  thyroid_panel: 23
+  lipid_panel: 18
+  troponin: 22
+  bnp_or_ntprobnp: 28
+  lactate_dehydrogenase: 7
+  hemoglobin_a1c: 14
+  arterial_blood_gas: 35
+
+imaging:
+  chest_xray: 45
+  abdominal_xray: 45
+  ultrasound_abdomen: 200
+  ct_chest: 300
+  ct_abdomen_pelvis: 350
+  ct_head: 300
+  ct_angiography: 500
+  mri_head: 600
+  mri_abdomen: 700
+  mri_spine: 700
+  echocardiogram: 350
+  transesophageal_echocardiogram: 1200
+
+serology:
+  hiv_test: 25
+  hepatitis_panel: 60
+  syphilis_serology: 18
+  ana: 35
+  anca: 55
+  rheumatoid_factor: 22
+  cryoglobulin: 110
+  immunoglobulins: 65
+  complement_c3_c4: 55
+
+microbiology:
+  blood_culture_extended: 65
+  fungal_culture: 70
+  mycobacterial_culture: 95
+  pcr_panel: 145
+
+pathology:
+  skin_biopsy: 350
+  liver_biopsy: 850
+  kidney_biopsy: 950
+  bone_marrow_biopsy: 1100
+  lymph_node_biopsy: 750
+
+procedures:
+  lumbar_puncture: 280
+  thoracentesis: 320
+  paracentesis: 280
+  pericardiocentesis: 800
+  bronchoscopy: 950
+  endoscopy_upper: 700
+  endoscopy_lower: 800
+
+default_cost: 0

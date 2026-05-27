@@ -1,0 +1,10 @@
+{
+  "label": "uniform_mid_ensemble",
+  "model": "anthropic/claude-sonnet-4-6",
+  "n_votes": 5,
+  "n_smoke_cases": 3,
+  "n_errors": 0,
+  "total_cost_usd": 0.438405,
+  "cost_prior_usd": 0.146135,
+  "calibrated_from": "../data/results/calibrate_uniform_mid_ensemble_medqa_1779855850"
+}

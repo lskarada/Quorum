@@ -1,0 +1,11 @@
+name: v2_single_sonnet
+description: |
+  v2 Arm B — Single Claude Sonnet 4.6 call, no orchestration.
+  Quantifies the lift Arm A's Gatekeeper + multi-agent debate
+  provides over the same base model. Uses the existing single-call
+  path (max_iterations=1, hypothesis only).
+max_iterations: 1
+consensus_threshold: 0.0
+hypothesis:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
