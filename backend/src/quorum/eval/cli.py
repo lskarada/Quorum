@@ -26,6 +26,7 @@ if _REPO_ROOT_ENV.exists():
     load_dotenv(_REPO_ROOT_ENV)
 
 from quorum.eval.corpus import load_cupcase, load_ground_truth, load_mcr, load_medqa  # noqa: E402
+from quorum.eval.ensemble import run_ensemble_corpus  # noqa: E402
 from quorum.eval.report import build_report  # noqa: E402
 from quorum.eval.runner import run_eval  # noqa: E402
 from quorum.eval.scorer import compare_runs, score_run  # noqa: E402
@@ -211,6 +212,144 @@ def calibrate(
         f"Calibrated {cfg.name}: cost_prior_usd={mean_cost:.6f} "
         f"(n_success={counted}, n_error={errors}, total=${total:.4f}) → {yaml_path}"
     )
+
+
+@app.command()
+def ensemble(
+    corpus: Annotated[str, typer.Option(help="Corpus name (cupcase, medqa, mcr)")],
+    model: Annotated[
+        str,
+        typer.Option(help="OpenRouter model id, e.g. anthropic/claude-haiku-4-5"),
+    ],
+    n_votes: Annotated[
+        int, typer.Option("--n-votes", help="Votes per case (majority wins)")
+    ] = 5,
+    n: Annotated[int, typer.Option(help="Number of cases")] = 30,
+    label: Annotated[
+        str,
+        typer.Option(
+            help=(
+                "Cell label used for results dir + cost-prior sidecar "
+                "(e.g. uniform_cheap_ensemble)."
+            ),
+        ),
+    ] = "ensemble",
+    cases_root: Annotated[
+        pathlib.Path, typer.Option(help="Cases dir")
+    ] = _DEFAULT_CASES_ROOT,
+    results_root: Annotated[
+        pathlib.Path, typer.Option(help="Results dir")
+    ] = _DEFAULT_RESULTS_ROOT,
+    confirm_cost: Annotated[bool, typer.Option("--confirm-cost")] = False,
+    calibrate_only: Annotated[
+        bool,
+        typer.Option(
+            "--calibrate-only",
+            help=(
+                "Run --n cases as a smoke set and write cost_prior to "
+                "data/results/ensemble_cost_priors/<label>.json; no final run."
+            ),
+        ),
+    ] = False,
+    exclude: Annotated[
+        pathlib.Path | None,
+        typer.Option(
+            help="JSON fixture with a `case_ids` array; matches are skipped.",
+        ),
+    ] = None,
+) -> None:
+    """Ensemble baseline: N independent Hypothesis calls + majority vote.
+
+    Acts as the H2 control for the v2 benchmark — without it, "5-agent debate
+    beats single call" is confounded with "5 samples beats 1 sample". Each
+    case fires `n_votes` independent calls to `model` with the canonical
+    hypothesis prompt; the modal top-1 wins. Per-case results are written
+    in FinalVerdict shape so the scorer/report pipeline works unchanged.
+    """
+    loader = _LOADERS.get(corpus)
+    if loader is None:
+        raise typer.BadParameter(
+            f"Unknown corpus: {corpus}. Available: {sorted(_LOADERS)}"
+        )
+    cases_path = cases_root / corpus / "all.json"
+    if not cases_path.exists():
+        raise typer.BadParameter(f"Corpus file not found: {cases_path}")
+    cases_iter = loader(cases_path)
+    if exclude is not None:
+        if not exclude.exists():
+            raise typer.BadParameter(f"Exclude fixture not found: {exclude}")
+        fixture = json.loads(exclude.read_text())
+        excluded_ids = set(fixture.get("case_ids") or [])
+        cases = [c for c in cases_iter if c.case_id not in excluded_ids]
+        typer.echo(
+            f"Excluded {len(excluded_ids)} case IDs from {exclude.name}; "
+            f"{len(cases)} cases remain before --n cap."
+        )
+    else:
+        cases = list(cases_iter)
+    cases = cases[:n]
+
+    # Cost-prior gate: read sidecar for this label if present.
+    sidecar_dir = results_root / "ensemble_cost_priors"
+    sidecar = sidecar_dir / f"{label}.json"
+    if sidecar.exists() and not calibrate_only:
+        prior = float(json.loads(sidecar.read_text()).get("cost_prior_usd", 0.0))
+        cap = float(os.environ.get("QUORUM_MAX_COST_USD", "20"))
+        projected = len(cases) * prior
+        if projected > cap and not confirm_cost:
+            typer.echo(
+                f"WARNING: ensemble '{label}' cost_prior_usd=${prior:.4f} × "
+                f"n={len(cases)} → projected ${projected:.2f} exceeds "
+                f"QUORUM_MAX_COST_USD=${cap:.2f}. Pass --confirm-cost to override."
+            )
+            raise typer.Exit(code=2)
+
+    suffix = "calibrate_" if calibrate_only else ""
+    out = results_root / f"{suffix}{label}_{corpus}_{int(time.time())}"
+    asyncio.run(run_ensemble_corpus(cases, model, n_votes, label, out))
+
+    if calibrate_only:
+        # Sum cost from per-case verdict files (skipping is_error=True).
+        total = 0.0
+        counted = 0
+        errors = 0
+        for vf in sorted(out.glob("case_*.json")):
+            data = json.loads(vf.read_text())
+            if data.get("is_error"):
+                errors += 1
+                continue
+            c = data.get("total_cost_usd")
+            if isinstance(c, (int, float)):
+                total += float(c)
+                counted += 1
+        if counted == 0:
+            raise typer.BadParameter(
+                f"No successful cases under {out} ({errors} errored); "
+                "cannot calibrate."
+            )
+        mean_cost = total / counted
+        sidecar_dir.mkdir(parents=True, exist_ok=True)
+        sidecar.write_text(
+            json.dumps(
+                {
+                    "label": label,
+                    "model": model,
+                    "n_votes": n_votes,
+                    "n_smoke_cases": counted,
+                    "n_errors": errors,
+                    "total_cost_usd": round(total, 6),
+                    "cost_prior_usd": round(mean_cost, 6),
+                    "calibrated_from": str(out),
+                },
+                indent=2,
+            )
+        )
+        typer.echo(
+            f"Calibrated {label}: cost_prior_usd={mean_cost:.6f} "
+            f"(n_success={counted}, n_error={errors}) → {sidecar}"
+        )
+    else:
+        typer.echo(str(out))
 
 
 @app.command()
