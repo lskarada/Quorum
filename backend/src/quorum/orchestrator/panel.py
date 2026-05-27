@@ -544,6 +544,14 @@ class Panel:
                 transcript.append(chal_msg)
                 total_real_cost += chal_msg.cost_usd
                 chal_dict = chal_msg.structured_output if isinstance(chal_msg.structured_output, dict) else {}
+                audit_writer.record_turn(
+                    agent="challenger",
+                    message_role="out",
+                    content=chal_msg.content,
+                    tokens=chal_msg.tokens_used,
+                    cost_usd=chal_msg.cost_usd,
+                    extra=dict(chal_dict),
+                )
             except Exception as exc:  # noqa: BLE001
                 audit_writer.record_turn(
                     agent="challenger", message_role="out",
@@ -551,15 +559,6 @@ class Panel:
                     extra={"error": True},
                 )
                 chal_dict = {"alternative_to_consider": "none", "against_top_candidate": [], "confidence_in_challenge": 0.0}
-                chal_msg = None
-            audit_writer.record_turn(
-                agent="challenger",
-                message_role="out",
-                content=chal_msg.content,
-                tokens=chal_msg.tokens_used,
-                cost_usd=chal_msg.cost_usd,
-                extra=dict(chal_dict),
-            )
 
             # ----- Stewardship -----
             try:
@@ -567,6 +566,14 @@ class Panel:
                 transcript.append(stew_msg)
                 total_real_cost += stew_msg.cost_usd
                 stew_dict = stew_msg.structured_output if isinstance(stew_msg.structured_output, dict) else {}
+                audit_writer.record_turn(
+                    agent="stewardship",
+                    message_role="out",
+                    content=stew_msg.content,
+                    tokens=stew_msg.tokens_used,
+                    cost_usd=stew_msg.cost_usd,
+                    extra={k: v for k, v in stew_dict.items() if k != "cheaper_alternative"},
+                )
             except Exception as exc:  # noqa: BLE001
                 audit_writer.record_turn(
                     agent="stewardship", message_role="out",
@@ -574,15 +581,6 @@ class Panel:
                     extra={"error": True},
                 )
                 stew_dict = {"accept_test": True, "cost_concern": None, "cheaper_alternative": None}
-                stew_msg = None
-            audit_writer.record_turn(
-                agent="stewardship",
-                message_role="out",
-                content=stew_msg.content,
-                tokens=stew_msg.tokens_used,
-                cost_usd=stew_msg.cost_usd,
-                extra={k: v for k, v in stew_dict.items() if k != "cheaper_alternative"},
-            )
 
             # ----- Checklist -----
             try:
@@ -590,6 +588,14 @@ class Panel:
                 transcript.append(chk_msg)
                 total_real_cost += chk_msg.cost_usd
                 chk_dict = chk_msg.structured_output if isinstance(chk_msg.structured_output, dict) else {}
+                audit_writer.record_turn(
+                    agent="checklist",
+                    message_role="out",
+                    content=chk_msg.content,
+                    tokens=chk_msg.tokens_used,
+                    cost_usd=chk_msg.cost_usd,
+                    extra=dict(chk_dict),
+                )
             except Exception as exc:  # noqa: BLE001
                 audit_writer.record_turn(
                     agent="checklist", message_role="out",
@@ -597,15 +603,6 @@ class Panel:
                     extra={"error": True},
                 )
                 chk_dict = {"consistent": True, "flags": [], "recommend_continue": True}
-                chk_msg = None
-            audit_writer.record_turn(
-                agent="checklist",
-                message_role="out",
-                content=chk_msg.content,
-                tokens=chk_msg.tokens_used,
-                cost_usd=chk_msg.cost_usd,
-                extra=dict(chk_dict),
-            )
 
             # ----- Commit decision -----
             if not posterior:
