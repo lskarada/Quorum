@@ -93,6 +93,21 @@ uv run --project backend quorum-eval score data/results/<baseline_dir>  --corpus
 uv run --project backend quorum-eval compare data/results/<dev_cheap_dir> data/results/<baseline_dir> --corpus medqa --cases-root data/cases
 ```
 
+## v2 Status
+
+v2 (the MedQA tier-matched ablation + ensemble control) is **paused at
+the Phase 4 → 5 gate**. All 10 cells were calibrated post-JSON-fix and
+0 cells were run; the 9-cell padded projection ($19.06) fit budget but
+the full 10-cell padded projection ($24.32) exceeded the plan's $22
+deferral threshold. Branch `benchmark/v2-system-vs-model` is frozen at
+SHA `86a4aee`, pending a project-level direction decision toward an
+SDBench/MAI-DxO-style sequential diagnosis benchmark on NEJM CPC +
+MedCaseReasoning. Full handoff state, resume command, calibrated cost
+priors, and outstanding pipeline-defect notes live in
+[`docs/v2-benchmark-paused.md`](./v2-benchmark-paused.md). Reusable
+v2 plumbing (ensemble runner, 4 new panel YAMLs, JSON-coercion fixes,
+calibration sidecar format) carries forward regardless of direction.
+
 ## Limitations
 
 See `docs/eval_methodology.md` § "Limitations" for the full list. The
