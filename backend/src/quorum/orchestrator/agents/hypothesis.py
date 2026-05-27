@@ -79,19 +79,18 @@ class HypothesisAgent(Agent):
         transcript: list[AgentMessage],
         iteration: int,
     ) -> list[dict]:
-        msgs: list[dict] = [
-            {"role": "system", "content": self.prompt_template},
-            {
-                "role": "user",
-                "content": (
-                    f"Case presentation:\n{case.presentation}\n\n"
-                    f"Iteration: {iteration}"
-                ),
-            },
+        user_parts: list[str] = [
+            f"# Case presentation\n{case.presentation}",
+            f"# Iteration\n{iteration}",
         ]
-        for prior in transcript:
-            msgs.append({"role": "assistant", "content": prior.content})
-        return msgs
+        if transcript:
+            user_parts.append("# Panel transcript so far")
+            for prior in transcript:
+                user_parts.append(f"## {prior.role.value}\n{prior.content}")
+        return [
+            {"role": "system", "content": self.prompt_template},
+            {"role": "user", "content": "\n\n".join(user_parts)},
+        ]
 
     @staticmethod
     def _normalize_posteriors(diff: Differential) -> Differential:

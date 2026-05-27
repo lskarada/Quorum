@@ -425,13 +425,36 @@ class Panel:
         transcript: list[AgentMessage] = []
         total_real_cost = 0.0
         last_posterior: dict[str, float] = {}
+        # Cap how much panel transcript is fed back into each agent each
+        # turn. The full available_findings are always in case.presentation;
+        # the transcript is just the panel's prior reasoning. Capping to the
+        # most recent N messages keeps prompts cheap and avoids latent
+        # validation failures from oversized context.
+        TRANSCRIPT_TAIL = 5
 
         for turn in range(1, max_turns + 1):
             case_input = self._build_sequential_case_input(case, revealed)
             iteration = turn - 1
+            tail = transcript[-TRANSCRIPT_TAIL:]
 
             # ----- Hypothesis -----
-            hyp_msg = await self.hypothesis.deliberate(case_input, list(transcript), iteration)
+            try:
+                hyp_msg = await self.hypothesis.deliberate(case_input, list(tail), iteration)
+            except Exception as exc:  # noqa: BLE001 — per-turn resilience
+                audit_writer.record_turn(
+                    agent="hypothesis", message_role="out",
+                    content=f"(error: {exc.__class__.__name__}: {exc})",
+                    extra={"error": True, "iteration": iteration},
+                )
+                # Reuse last_posterior so the loop can continue.
+                if last_posterior:
+                    continue
+                # No prior posterior to fall back on — bail.
+                return self._finalize_forced(
+                    case, audit_writer, last_posterior, turn,
+                    gatekeeper.simulated_cost, total_real_cost, revealed,
+                    reason=f"hypothesis failed: {exc}",
+                )
             transcript.append(hyp_msg)
             total_real_cost += hyp_msg.cost_usd
             if isinstance(hyp_msg.structured_output, Differential):
@@ -449,15 +472,24 @@ class Panel:
             )
 
             # ----- TestChooser -----
-            tc_msg = await self.test_chooser.deliberate(case_input, list(transcript), iteration)
-            transcript.append(tc_msg)
-            total_real_cost += tc_msg.cost_usd
-            query = (
-                tc_msg.structured_output.name
-                if tc_msg.structured_output is not None
-                and hasattr(tc_msg.structured_output, "name")
-                else ""
-            )
+            try:
+                tc_msg = await self.test_chooser.deliberate(case_input, list(tail), iteration)
+                transcript.append(tc_msg)
+                total_real_cost += tc_msg.cost_usd
+                query = (
+                    tc_msg.structured_output.name
+                    if tc_msg.structured_output is not None
+                    and hasattr(tc_msg.structured_output, "name")
+                    else ""
+                )
+            except Exception as exc:  # noqa: BLE001
+                audit_writer.record_turn(
+                    agent="test_chooser", message_role="out",
+                    content=f"(error: {exc.__class__.__name__}: {exc})",
+                    extra={"error": True},
+                )
+                query = ""  # let Gatekeeper return "not available"
+                tc_msg = None
             audit_writer.record_turn(
                 agent="test_chooser",
                 message_role="out",
@@ -507,10 +539,19 @@ class Panel:
                 )
 
             # ----- Challenger -----
-            chal_msg = await self.challenger.deliberate(case_input, list(transcript), iteration)
-            transcript.append(chal_msg)
-            total_real_cost += chal_msg.cost_usd
-            chal_dict = chal_msg.structured_output if isinstance(chal_msg.structured_output, dict) else {}
+            try:
+                chal_msg = await self.challenger.deliberate(case_input, list(tail), iteration)
+                transcript.append(chal_msg)
+                total_real_cost += chal_msg.cost_usd
+                chal_dict = chal_msg.structured_output if isinstance(chal_msg.structured_output, dict) else {}
+            except Exception as exc:  # noqa: BLE001
+                audit_writer.record_turn(
+                    agent="challenger", message_role="out",
+                    content=f"(error: {exc.__class__.__name__}: {exc})",
+                    extra={"error": True},
+                )
+                chal_dict = {"alternative_to_consider": "none", "against_top_candidate": [], "confidence_in_challenge": 0.0}
+                chal_msg = None
             audit_writer.record_turn(
                 agent="challenger",
                 message_role="out",
@@ -521,10 +562,19 @@ class Panel:
             )
 
             # ----- Stewardship -----
-            stew_msg = await self.stewardship.deliberate(case_input, list(transcript), iteration)
-            transcript.append(stew_msg)
-            total_real_cost += stew_msg.cost_usd
-            stew_dict = stew_msg.structured_output if isinstance(stew_msg.structured_output, dict) else {}
+            try:
+                stew_msg = await self.stewardship.deliberate(case_input, list(tail), iteration)
+                transcript.append(stew_msg)
+                total_real_cost += stew_msg.cost_usd
+                stew_dict = stew_msg.structured_output if isinstance(stew_msg.structured_output, dict) else {}
+            except Exception as exc:  # noqa: BLE001
+                audit_writer.record_turn(
+                    agent="stewardship", message_role="out",
+                    content=f"(error: {exc.__class__.__name__}: {exc})",
+                    extra={"error": True},
+                )
+                stew_dict = {"accept_test": True, "cost_concern": None, "cheaper_alternative": None}
+                stew_msg = None
             audit_writer.record_turn(
                 agent="stewardship",
                 message_role="out",
@@ -535,10 +585,19 @@ class Panel:
             )
 
             # ----- Checklist -----
-            chk_msg = await self.checklist.deliberate(case_input, list(transcript), iteration)
-            transcript.append(chk_msg)
-            total_real_cost += chk_msg.cost_usd
-            chk_dict = chk_msg.structured_output if isinstance(chk_msg.structured_output, dict) else {}
+            try:
+                chk_msg = await self.checklist.deliberate(case_input, list(tail), iteration)
+                transcript.append(chk_msg)
+                total_real_cost += chk_msg.cost_usd
+                chk_dict = chk_msg.structured_output if isinstance(chk_msg.structured_output, dict) else {}
+            except Exception as exc:  # noqa: BLE001
+                audit_writer.record_turn(
+                    agent="checklist", message_role="out",
+                    content=f"(error: {exc.__class__.__name__}: {exc})",
+                    extra={"error": True},
+                )
+                chk_dict = {"consistent": True, "flags": [], "recommend_continue": True}
+                chk_msg = None
             audit_writer.record_turn(
                 agent="checklist",
                 message_role="out",

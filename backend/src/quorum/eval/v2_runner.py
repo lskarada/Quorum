@@ -87,6 +87,13 @@ async def run_arm_a(
                 commit_threshold=commit_threshold,
             )
         except Exception as exc:  # noqa: BLE001 — best-effort capture per case
+            import traceback
+            writer.record_turn(
+                agent="runner",
+                message_role="safety_check",
+                content=f"ERROR: {exc.__class__.__name__}: {exc}",
+                extra={"traceback": traceback.format_exc()[-1500:]},
+            )
             writer.audit.final_committed_diagnosis = f"(error: {exc.__class__.__name__})"
         writer.close()
 
