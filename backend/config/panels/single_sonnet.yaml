@@ -1,0 +1,7 @@
+name: single_sonnet
+description: One Hypothesis call only, anthropic/claude-sonnet-4-6. Mid-tier 1-call cell for the v2 tier-matched ablation grid.
+max_iterations: 1
+consensus_threshold: 0.0
+hypothesis:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
