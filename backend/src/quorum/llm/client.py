@@ -168,6 +168,12 @@ class LLMClient:
         response_format: dict | None = None,
         max_tokens: int = 4096,
     ) -> LLMResponse:
+        # QUORUM_DEFAULT_MAX_TOKENS env var caps max_tokens for ALL calls.
+        # Useful for low-credit recovery runs where the provider's balance
+        # is below the default 4096 token allowance.
+        env_cap = os.environ.get("QUORUM_DEFAULT_MAX_TOKENS")
+        if env_cap:
+            max_tokens = min(max_tokens, int(env_cap))
         kwargs: dict = {
             "model": model or self.default_model,
             "messages": messages,
