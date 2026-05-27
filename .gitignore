@@ -55,6 +55,7 @@ data/cases/eval_corpus_v2/nejm_sample.json
 data/results/*.json
 data/results/*/
 data/results/.spend_total.txt
+data/results/.spend_ledger.tsv
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep
