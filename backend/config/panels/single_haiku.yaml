@@ -1,7 +1,9 @@
 name: single_haiku
-description: One Hypothesis call only, anthropic/claude-haiku-4-5. Cheap-tier 1-call cell for the v2 tier-matched ablation grid.
+description: One Hypothesis call only, anthropic/claude-haiku-4-5. Cheap-tier 1-call
+  cell for the v2 tier-matched ablation grid.
 max_iterations: 1
 consensus_threshold: 0.0
 hypothesis:
   model: anthropic/claude-haiku-4-5
   temperature: 0.0
+cost_prior_usd: 0.007036

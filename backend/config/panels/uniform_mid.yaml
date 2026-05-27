@@ -1,5 +1,6 @@
 name: uniform_mid
-description: 5-agent debate with anthropic/claude-sonnet-4-6 in every slot. Mid-tier 5-agent cell for the v2 tier-matched ablation grid.
+description: 5-agent debate with anthropic/claude-sonnet-4-6 in every slot. Mid-tier
+  5-agent cell for the v2 tier-matched ablation grid.
 max_iterations: 3
 consensus_threshold: 0.6
 hypothesis:
@@ -17,3 +18,4 @@ stewardship:
 checklist:
   model: anthropic/claude-sonnet-4-6
   temperature: 0.0
+cost_prior_usd: 0.063191

@@ -1,9 +1,16 @@
 name: single_model_premium
-description: All five agents use Claude Opus 4 (clean reproduction of MAI-DxO's single-model approach).
+description: All five agents use Claude Opus 4 (clean reproduction of MAI-DxO's single-model
+  approach).
 max_iterations: 3
 consensus_threshold: 0.6
-hypothesis:    { model: "anthropic/claude-opus-4" }
-test_chooser:  { model: "anthropic/claude-opus-4" }
-challenger:    { model: "anthropic/claude-opus-4" }
-stewardship:   { model: "anthropic/claude-opus-4" }
-checklist:     { model: "anthropic/claude-opus-4" }
+hypothesis:
+  model: anthropic/claude-opus-4
+test_chooser:
+  model: anthropic/claude-opus-4
+challenger:
+  model: anthropic/claude-opus-4
+stewardship:
+  model: anthropic/claude-opus-4
+checklist:
+  model: anthropic/claude-opus-4
+cost_prior_usd: 0.19524

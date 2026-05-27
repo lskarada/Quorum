@@ -1,0 +1,10 @@
+{
+  "label": "uniform_cheap_ensemble",
+  "model": "anthropic/claude-haiku-4-5",
+  "n_votes": 5,
+  "n_smoke_cases": 3,
+  "n_errors": 0,
+  "total_cost_usd": 0.087172,
+  "cost_prior_usd": 0.029057,
+  "calibrated_from": "../data/results/calibrate_uniform_cheap_ensemble_medqa_1779855704"
+}
