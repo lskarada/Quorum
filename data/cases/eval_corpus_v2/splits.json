@@ -1,0 +1,51 @@
+{
+  "tune": [
+    "mcr-PMC7311097",
+    "mcr-PMC9568751",
+    "nejm-cpc-28-2025",
+    "nejm-cpc-36-2025",
+    "nejm-cpc-5-2026"
+  ],
+  "eval": [
+    "mcr-PMC10264136",
+    "mcr-PMC11286540",
+    "mcr-PMC2561009",
+    "mcr-PMC3800639",
+    "mcr-PMC5030447",
+    "mcr-PMC6159271",
+    "mcr-PMC7501484",
+    "mcr-PMC8271246",
+    "nejm-cpc-10-2026",
+    "nejm-cpc-11-2026",
+    "nejm-cpc-13-2026",
+    "nejm-cpc-14-2026",
+    "nejm-cpc-2-2026",
+    "nejm-cpc-26-2025",
+    "nejm-cpc-27-2025",
+    "nejm-cpc-3-2026",
+    "nejm-cpc-30-2025",
+    "nejm-cpc-32-2025",
+    "nejm-cpc-34-2025",
+    "nejm-cpc-35-2025",
+    "nejm-cpc-4-2026",
+    "nejm-cpc-6-2026",
+    "nejm-cpc-7-2026",
+    "nejm-cpc-8-2026",
+    "nejm-cpc-9-2026",
+    "rb-lirical-01",
+    "rb-lirical-02",
+    "rb-lirical-03",
+    "rb-lirical-04",
+    "rb-lirical-05"
+  ],
+  "_provenance": {
+    "seed": 20260526,
+    "source_files": [
+      "nejm_sample.json",
+      "mcr_sample.json",
+      "rarebench_sample.json"
+    ],
+    "tune_n": 5,
+    "eval_n": 30
+  }
+}
