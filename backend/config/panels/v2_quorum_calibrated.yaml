@@ -1,0 +1,24 @@
+name: v2_quorum_calibrated
+description: |
+  v2 Arm A — Calibrated, auditable Quorum on Claude Sonnet 4.6 for the
+  Phase 5+ SDBench-style sequential diagnostic encounter. All 5 agents
+  share the same model so observed lift over Arm B (single Sonnet) is
+  attributable to the orchestrator (Gatekeeper, multi-agent debate,
+  SafetyChecker), not to mixing model strengths.
+max_iterations: 30
+consensus_threshold: 0.70
+hypothesis:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
+test_chooser:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
+challenger:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
+stewardship:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0
+checklist:
+  model: anthropic/claude-sonnet-4-6
+  temperature: 0.0

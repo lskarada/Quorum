@@ -17,7 +17,7 @@ class AgentSlot(BaseModel):
 class PanelConfig(BaseModel):
     name: str
     description: str = ""
-    max_iterations: int = Field(default=3, ge=1, le=20)
+    max_iterations: int = Field(default=3, ge=1, le=50)
     consensus_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     schema_version: int = 1
     # Calibrated mean cost per case on a smoke set, written by
