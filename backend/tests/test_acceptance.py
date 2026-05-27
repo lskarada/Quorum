@@ -223,6 +223,9 @@ def test_anti_hallucination_flag_only_in_expected_files():
         # Subagent rules / prompts may mention it; allow under .claude/.
         if "/.claude/" in line:
             continue
+        # Plan documents under docs/superpowers/plans/ describe the protocol; allow.
+        if "/docs/superpowers/plans/" in line:
+            continue
         if "/research/papers/" in line or "/research/" in line:
             continue
         leaks.append(line)

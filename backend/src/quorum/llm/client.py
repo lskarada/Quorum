@@ -116,7 +116,19 @@ class LLMClient:
             raise RuntimeError(
                 "OPENROUTER_API_KEY not set. See .env.example."
             )
-        base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        # CLOUDFLARE_AI_GATEWAY_URL, when set, wraps OpenRouter so all three
+        # vendor calls (Anthropic / OpenAI / Google) share caching +
+        # observability. Cloudflare's URL pattern for OpenRouter is
+        #   {gateway}/openrouter/v1
+        # An explicit OPENROUTER_BASE_URL still wins (escape hatch). When
+        # neither is set the client falls back to native OpenRouter.
+        explicit = os.environ.get("OPENROUTER_BASE_URL")
+        if explicit:
+            base_url = explicit
+        elif gateway := os.environ.get("CLOUDFLARE_AI_GATEWAY_URL"):
+            base_url = f"{gateway.rstrip('/')}/openrouter/v1"
+        else:
+            base_url = "https://openrouter.ai/api/v1"
 
         extra_headers = {}
         if site := os.environ.get("OPENROUTER_SITE_URL"):

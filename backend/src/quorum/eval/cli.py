@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import pathlib
 import time
 from typing import Annotated
@@ -59,6 +60,16 @@ def run(
         pathlib.Path, typer.Option(help="Results dir")
     ] = _DEFAULT_RESULTS_ROOT,
     confirm_cost: Annotated[bool, typer.Option("--confirm-cost")] = False,
+    exclude: Annotated[
+        pathlib.Path | None,
+        typer.Option(
+            help=(
+                "Path to a JSON fixture with a `case_ids` array; matching "
+                "case IDs are skipped. Used by Phase 7 to exclude prompt-"
+                "tuning holdouts."
+            ),
+        ),
+    ] = None,
 ) -> None:
     """Run a panel over a corpus and write per-case verdicts."""
     cfg = _cfg(panel)
@@ -70,7 +81,34 @@ def run(
     cases_path = cases_root / corpus / "all.json"
     if not cases_path.exists():
         raise typer.BadParameter(f"Corpus file not found: {cases_path}")
-    cases = loader(cases_path)
+    cases_iter = loader(cases_path)
+    if exclude is not None:
+        if not exclude.exists():
+            raise typer.BadParameter(f"Exclude fixture not found: {exclude}")
+        fixture = json.loads(exclude.read_text())
+        excluded_ids = set(fixture.get("case_ids") or [])
+        cases = [c for c in cases_iter if c.case_id not in excluded_ids]
+        typer.echo(
+            f"Excluded {len(excluded_ids)} case IDs from {exclude.name}; "
+            f"{len(cases)} cases remain before --n cap."
+        )
+    else:
+        cases = list(cases_iter)
+
+    # Cost-prior pre-flight (Phase 2). If panel has a calibrated cost_prior_usd,
+    # project n * prior against QUORUM_MAX_COST_USD and abort unless confirmed.
+    if cfg.cost_prior_usd is not None:
+        cap = float(os.environ.get("QUORUM_MAX_COST_USD", "20"))
+        projected = n * cfg.cost_prior_usd
+        if projected > cap and not confirm_cost:
+            typer.echo(
+                f"WARNING: panel '{cfg.name}' cost_prior_usd="
+                f"${cfg.cost_prior_usd:.4f} × n={n} → projected ${projected:.2f} "
+                f"exceeds QUORUM_MAX_COST_USD=${cap:.2f}. "
+                f"Pass --confirm-cost to override."
+            )
+            raise typer.Exit(code=2)
+
     out = results_root / f"{cfg.name}_{corpus}_{int(time.time())}"
     asyncio.run(run_eval(cases, cfg, n, out, confirm_cost=confirm_cost))
     typer.echo(str(out))
@@ -99,6 +137,80 @@ def compare(
     gt = load_ground_truth(cases_root / corpus / "all.json")
     cmp = compare_runs(run_a, run_b, gt)
     typer.echo(json.dumps(cmp, indent=2, default=str))
+
+
+@app.command()
+def calibrate(
+    panel: Annotated[str, typer.Option(help="Panel config name to calibrate")],
+    corpus: Annotated[str, typer.Option(help="Corpus name (cupcase, medqa, mcr)")] = "medqa",
+    n: Annotated[int, typer.Option(help="Number of smoke cases to average over")] = 3,
+    cases_root: Annotated[
+        pathlib.Path, typer.Option(help="Cases dir")
+    ] = _DEFAULT_CASES_ROOT,
+    results_root: Annotated[
+        pathlib.Path, typer.Option(help="Results dir")
+    ] = _DEFAULT_RESULTS_ROOT,
+) -> None:
+    """Run a small smoke set, compute mean cost/case, write cost_prior_usd
+    into the panel YAML in-place.
+
+    Idempotent: re-running overwrites the prior value with the new average.
+    The calibration burns real LLM dollars at the smoke-set scale — keep n
+    small (default 3).
+    """
+    cfg = _cfg(panel)
+    loader = _LOADERS.get(corpus)
+    if loader is None:
+        raise typer.BadParameter(
+            f"Unknown corpus: {corpus}. Available: {sorted(_LOADERS)}"
+        )
+    cases_path = cases_root / corpus / "all.json"
+    if not cases_path.exists():
+        raise typer.BadParameter(f"Corpus file not found: {cases_path}")
+    cases = loader(cases_path)
+    out = results_root / f"calibrate_{cfg.name}_{corpus}_{int(time.time())}"
+    asyncio.run(run_eval(cases, cfg, n, out, confirm_cost=True))
+
+    # Sum cost from per-case verdict files (FinalVerdict.total_cost_usd).
+    # Skip cases where is_error=True so transient LLM failures don't bias
+    # the mean to zero. If every case errors, surface that explicitly.
+    total = 0.0
+    counted = 0
+    errors = 0
+    for vf in sorted(out.glob("case_*.json")):
+        data = json.loads(vf.read_text())
+        if data.get("is_error"):
+            errors += 1
+            continue
+        c = data.get("total_cost_usd")
+        if isinstance(c, (int, float)):
+            total += float(c)
+            counted += 1
+    if counted == 0:
+        raise typer.BadParameter(
+            f"No successful cases under {out} ({errors} errored); cannot calibrate."
+        )
+    mean_cost = total / counted
+
+    # Locate + rewrite the YAML in place, preserving comments by re-loading
+    # the raw dict, updating, and dumping. (PyYAML default does NOT preserve
+    # comments — acceptable for a generated calibrated value.)
+    panels_root = pathlib.Path(
+        os.environ.get("QUORUM_PANELS_DIR")
+        or pathlib.Path(__file__).resolve().parents[3] / "config" / "panels"
+    )
+    yaml_path = panels_root / f"{cfg.name}.yaml"
+    if not yaml_path.exists():
+        raise typer.BadParameter(f"Panel YAML not found at {yaml_path}")
+    import yaml as _yaml
+
+    raw = _yaml.safe_load(yaml_path.read_text())
+    raw["cost_prior_usd"] = round(mean_cost, 6)
+    yaml_path.write_text(_yaml.safe_dump(raw, sort_keys=False))
+    typer.echo(
+        f"Calibrated {cfg.name}: cost_prior_usd={mean_cost:.6f} "
+        f"(n_success={counted}, n_error={errors}, total=${total:.4f}) → {yaml_path}"
+    )
 
 
 @app.command()

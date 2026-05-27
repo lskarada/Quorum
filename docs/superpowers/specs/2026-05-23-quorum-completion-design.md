@@ -111,7 +111,7 @@ Decisions locked during the brainstorming session (2026-05-23):
 - `providers/anthropic_provider.py` — becomes thin wrapper or is removed in favor of model-prefix routing through OpenRouter. Decision deferred to Phase 1 (see plan).
 - `providers/openai_provider.py` — same.
 - `providers/google_provider.py` — same.
-- `providers/workers_ai_provider.py` — same; Cloudflare Workers AI path is preserved as a fallback option but not the primary routing.
+- `providers/workers_ai_provider.py` — **decision 2026-05-24: struck.** Cloudflare Workers AI as a 4th provider is removed from scope. The "open panel vs closed panel" comparison arm is replaced by "single-vendor vs mixed-vendor". The provider stub may be deleted in a future cleanup pass. Cloudflare AI Gateway (the routing layer, not the inference provider) remains supported via `CLOUDFLARE_AI_GATEWAY_URL` — Phase 5 verifies routing through it for the existing three providers.
 
 **Model name convention:** vendor-prefixed strings as OpenRouter expects. The existing `ModelName` `Literal` in `client.py` is widened to `str` to accept any OpenRouter-supported model.
 

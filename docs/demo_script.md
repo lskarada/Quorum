@@ -27,9 +27,12 @@ bottom highlights agreement and disagreement.
 
 ## 2:30–3:30 — Eval numbers
 
-Show `docs/results.md` table (placeholder until the headline eval
-runs). At n=100 with `QUORUM_MAX_COST_USD` enforced, mixed-vendor vs
-single-model McNemar comparison.
+Show `docs/results.md` table. The headline ablation is
+**5-agent debate (`dev_cheap`)** vs **single-call baseline
+(`baseline_single_call`, all Opus)** on MedQA at n=30, scored with
+paired McNemar on top-1 and Wilcoxon on MRR. Premium-tier panels
+(`single_model_premium`, `mixed_vendor`) are documented but were not
+run in this release for budget reasons — see results.md Limitations.
 
 ## 3:30–4:30 — Architecture + MCP + open repo
 

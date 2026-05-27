@@ -18,16 +18,35 @@ material is redistributed.
 MedQA is the corpus used for the `/goal` autonomous smoke runs (n=3 by
 default) and is the default `--corpus` flag for `quorum-eval`.
 
-### Secondary candidates (not yet wired)
+### Secondary corpora (loaders shipped)
 
-The following corpora are documented as future loaders. No default loader
-ships in the current harness.
+The following corpora have download loaders in
+`backend/scripts/download_corpus.py` and matching eval-harness loaders in
+`backend/src/quorum/eval/corpus.py`. The case JSON is **not committed**
+(license uncertainty + corpus size); reproduce locally via the download
+step below.
 
-- **CUPCase** — open case-report corpus. Useful for a more discursive,
-  presentation-style format than MedQA's MCQ structure.
-- **MedCaseReasoning** — MIT-licensed corpus with explicit reasoning
-  labels per case. Enables reasoning-trace scoring on top of final-answer
-  scoring.
+- **CUPCase** — open case-report corpus (`ofir408/CUPCase` on
+  HuggingFace, test split). 200 cases. More discursive, presentation-style
+  format than MedQA's MCQ structure.
+- **MedCaseReasoning** — `zou-lab/MedCaseReasoning` on HuggingFace, train
+  split, 200 cases. Includes explicit per-case reasoning labels enabling
+  reasoning-trace scoring on top of final-answer scoring.
+
+### Reproducibility — downloading corpora
+
+Corpus JSON files at `data/cases/<name>/all.json` are gitignored to
+avoid redistributing third-party medical case data without a license
+audit. Reproduce locally:
+
+```bash
+cd backend && uv run python scripts/download_corpus.py            # all three
+cd backend && uv run python scripts/download_corpus.py cupcase    # one corpus
+```
+
+The script reads from upstream HuggingFace mirrors (verified accessible
+2026-05-24) and normalizes each row into the schema expected by the
+loader. Re-run any time you need a fresh local copy.
 
 ### Not included: NEJM CPCs
 
@@ -115,6 +134,20 @@ Five-agent debate outcomes depend on prompt wording. Per-agent prompt
 files in `backend/src/quorum/orchestrator/prompts/*.md` are versioned in
 git; the commit SHA is recorded in each run manifest, but no automated
 prompt-variant ablation is included.
+
+### Prompt tuning protocol + held-out set
+
+A 7-case held-out set is reserved in
+`backend/tests/fixtures/prompt_tuning_holdout.json` (case IDs
+`medqa_0050..medqa_0056`). These cases MUST be excluded from any headline
+run via the `--exclude` flag on `quorum-eval run`, to prevent the
+headline numbers from being optimistic against the cases used to tune
+the prompts. A single hypothesis-prompt iteration cycle was attempted
+on this holdout (2026-05-24): a fully rewritten production variant
+neither improved over the skeleton baseline on the comparable
+non-error subset nor reduced the intermittent LLM-JSON-parse error
+rate, so the skeleton prompt was retained. Per-agent prompt iteration
+for the remaining four agents is documented as future work.
 
 ## Reporting framing
 

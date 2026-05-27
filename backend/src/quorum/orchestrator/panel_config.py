@@ -20,6 +20,12 @@ class PanelConfig(BaseModel):
     max_iterations: int = Field(default=3, ge=1, le=20)
     consensus_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     schema_version: int = 1
+    # Calibrated mean cost per case on a smoke set, written by
+    # `quorum-eval calibrate`. The eval-run CLI uses this for the pre-flight
+    # budget projection so `n * cost_prior_usd > QUORUM_MAX_COST_USD` warns
+    # before any LLM call. None = uncalibrated → CLI falls back to a coarse
+    # default in runner.py.
+    cost_prior_usd: float | None = Field(default=None, ge=0.0)
     # NOTE: `hypothesis` is the only required slot. The four others may be omitted
     # for the baseline_single_call config — see Task 2.3. Panel.diagnose()
     # skips agents whose slot is None.
@@ -36,7 +42,14 @@ class PanelConfig(BaseModel):
 
     @classmethod
     def list_available(cls, configs_dir: pathlib.Path | None = None) -> list[PanelConfig]:
-        root = configs_dir or pathlib.Path(__file__).resolve().parents[3] / "config" / "panels"
+        # Honor QUORUM_PANELS_DIR for testability; falls back to repo default.
+        import os
+        env_dir = os.environ.get("QUORUM_PANELS_DIR")
+        root = (
+            configs_dir
+            or (pathlib.Path(env_dir) if env_dir else None)
+            or pathlib.Path(__file__).resolve().parents[3] / "config" / "panels"
+        )
         return sorted(
             (cls.from_yaml(p) for p in root.glob("*.yaml")),
             key=lambda c: c.name,

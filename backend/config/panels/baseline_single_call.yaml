@@ -1,5 +1,9 @@
 name: baseline_single_call
-description: One Hypothesis call only — no debate, no other agents. The "what would a single LLM do" comparison floor that reviewers will ask for.
+description: "One Hypothesis call only \u2014 no debate, no other agents. The \"what\
+  \ would a single LLM do\" comparison floor that reviewers will ask for."
 max_iterations: 1
 consensus_threshold: 0.0
-hypothesis:    { model: "anthropic/claude-opus-4", temperature: 0.0 }
+hypothesis:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
+cost_prior_usd: 0.080783

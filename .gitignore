@@ -41,12 +41,23 @@ dist/
 # Data (commit schemas, not contents)
 data/cases/nejm/*.json
 data/cases/medqa/*.json
+data/cases/cupcase/*.json
+data/cases/mcr/*.json
 !data/cases/**/_schema.json
 data/results/*.json
 data/results/*/
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep
+# v2 benchmark attribution + diagnostics artifacts (small JSON summaries,
+# not raw per-case data). Committed so a reviewer can reproduce phase 6
+# tables without re-running the $20+ benchmark.
+!data/results/v1_baseline_frozen.json
+!data/results/v2_*.json
+!data/results/v2_*.jsonl
+!data/results/v2_*.md
+!data/results/ensemble_cost_priors/
+!data/results/ensemble_cost_priors/*.json
 
 # data/schemas/quorum.schema.json IS committed — it's the generated
 # Pydantic↔TypeScript parity contract. Regenerate with:
