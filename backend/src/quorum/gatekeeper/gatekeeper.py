@@ -36,7 +36,10 @@ class GatekeeperResponse:
 class Gatekeeper:
     DEFAULT_MAX_TURNS = 30
     DEFAULT_MAX_COST = 5000.0
-    MATCHER_MODEL = "anthropic/claude-sonnet-4-6"
+    # Use Haiku for the matcher: this is a deterministic "pick an index from
+    # a short list" task, not a clinical reasoning call. The five agents
+    # remain Sonnet 4.6 per the v2 rule.
+    MATCHER_MODEL = "anthropic/claude-haiku-4-5"
 
     def __init__(
         self,
@@ -85,17 +88,28 @@ class Gatekeeper:
     async def _llm_match(self, question: str, findings: list[Finding]) -> int:
         """Return index of matched finding, or -1 if no match.
 
-        Production path: Sonnet 4.6 semantic match.
-        Fallback (no client): substring keyword match against label tokens.
+        Two-stage match for cost efficiency:
+          1. Substring keyword match against label tokens (free).
+          2. If substring misses and an llm_client is configured, fall back
+             to Haiku 4.5 for a one-shot fuzzy semantic match (~$0.0005/call).
         Tests monkey-patch this method directly to stay hermetic.
         """
         if not findings:
             return -1
+        idx = self._substring_match(question, findings)
+        if idx >= 0:
+            return idx
         if self.llm_client is None:
-            return self._substring_match(question, findings)
+            return -1
 
         messages = [
-            {"role": "system", "content": "You match a clinical query to one available finding by index, or -1 if none apply."},
+            {
+                "role": "system",
+                "content": (
+                    "You match a clinical query to one available finding by index, "
+                    "or -1 if none apply."
+                ),
+            },
             {"role": "user", "content": self._build_match_prompt(question, findings)},
         ]
         response = await self.llm_client.complete(
