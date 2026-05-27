@@ -1,0 +1,40 @@
+{
+  "_source": "Synthetic representative samples — v1 dev_cheap runs flagged 10/30 cases as is_error but did not persist raw_response (instrumentation gap). These patterns cover the canonical LLM-JSON failure modes that the haiku-4-5-routed Hypothesis agent has emitted on inspection of past stderr traces and OpenRouter dashboards.",
+  "_failure_modes": [
+    "fence_only_unfenced — single line of bare JSON wrapped in fence",
+    "prose_preamble_then_json — explainer text before the object",
+    "trailing_prose_after_json — fence then commentary then more fence",
+    "fence_with_lang_tag_capitalised — ```Json or similar",
+    "leading_xml_tag — <json>{...}</json>",
+    "trailing_whitespace_and_tag — {...}\\n</json>",
+    "json_inside_thinking_tags — <thinking>...</thinking>\\n{...}",
+    "code_fence_no_lang_then_trailing — ``` then object then ``` then text"
+  ],
+  "samples": [
+    {
+      "id": "prose_preamble_then_json",
+      "raw": "Here is the diagnostic differential in the requested JSON format:\n\n{\"candidates\": [{\"name\": \"Acute Cystitis\", \"icd10\": \"N39.0\", \"posterior\": 0.75}], \"iteration\": 1}",
+      "expected_value": {"candidates": [{"name": "Acute Cystitis", "icd10": "N39.0", "posterior": 0.75}], "iteration": 1}
+    },
+    {
+      "id": "leading_xml_tag",
+      "raw": "<json>\n{\"candidates\": [{\"name\": \"Pneumonia\", \"posterior\": 0.6}], \"iteration\": 1}\n</json>",
+      "expected_value": {"candidates": [{"name": "Pneumonia", "posterior": 0.6}], "iteration": 1}
+    },
+    {
+      "id": "json_inside_thinking_tags",
+      "raw": "<thinking>\nLet me consider the differential carefully.\nThe patient has dysuria but no fever.\n</thinking>\n{\"candidates\": [{\"name\": \"Lower UTI\", \"posterior\": 0.8}], \"iteration\": 1}",
+      "expected_value": {"candidates": [{"name": "Lower UTI", "posterior": 0.8}], "iteration": 1}
+    },
+    {
+      "id": "fence_with_lang_tag_mixed_case",
+      "raw": "```Json\n{\"candidates\": [{\"name\": \"Sepsis\", \"posterior\": 0.5}], \"iteration\": 1}\n```",
+      "expected_value": {"candidates": [{"name": "Sepsis", "posterior": 0.5}], "iteration": 1}
+    },
+    {
+      "id": "trailing_xml_tag_after_object",
+      "raw": "{\"candidates\": [{\"name\": \"Migraine\", \"posterior\": 0.4}], \"iteration\": 1}\n</response>",
+      "expected_value": {"candidates": [{"name": "Migraine", "posterior": 0.4}], "iteration": 1}
+    }
+  ]
+}

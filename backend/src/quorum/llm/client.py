@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import sys
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -44,7 +45,10 @@ def _track_spend(cost_usd: float) -> None:
         )
 
 
-_JSON_FENCE_PREFIXES = ("```json", "```JSON", "```")
+# Triple-backtick fence with an optional language tag (json/JSON/Json/etc).
+# Case-insensitive so ```Json, ```JSON, ```json all strip cleanly.
+_FENCE_OPEN_RE = re.compile(r"^```[A-Za-z0-9_+\-]*\s*\n?", flags=re.IGNORECASE)
+_FENCE_CLOSE_RE = re.compile(r"\n?```\s*$")
 
 
 def _strip_json_fence(content: str) -> str:
@@ -53,43 +57,57 @@ def _strip_json_fence(content: str) -> str:
     Anthropic models routed through OpenRouter often wrap structured output
     in triple-backtick fences even when response_format={"type":"json_object"}
     is set, because Anthropic's API doesn't natively support OpenAI-style JSON
-    mode. Stripping defensively here lets every agent's json.loads succeed.
+    mode. The fence may carry any case of the json language tag (```Json,
+    ```JSON, ```json, ```) or no tag at all. Stripping defensively here lets
+    every agent's json.loads succeed.
     """
     s = content.strip()
     if not s.startswith("```"):
         return content
-    for prefix in _JSON_FENCE_PREFIXES:
-        if s.startswith(prefix):
-            s = s[len(prefix):]
-            break
-    s = s.lstrip("\n")
-    if s.endswith("```"):
-        s = s[: -len("```")]
+    s = _FENCE_OPEN_RE.sub("", s, count=1)
+    s = _FENCE_CLOSE_RE.sub("", s)
     return s.strip()
 
 
 def _normalize_json_content(content: str) -> str:
     """Normalize LLM JSON output: strip markdown fence + take first JSON value.
 
-    Some models return a JSON object followed by prose commentary even when
-    asked for JSON only. json.loads raises "Extra data" on that. Using
-    raw_decode extracts just the leading JSON value and discards trailing
-    commentary, so each agent's downstream json.loads succeeds cleanly.
+    Coercion order:
+      1. Strip surrounding ``` fences (any case of lang tag, or none).
+      2. If content starts with a JSON value, raw_decode it and discard
+         trailing prose ("Extra data" tolerance).
+      3. Otherwise scan for the first '{' / '[' and try raw_decode from
+         there — handles prose preambles ("Here is the JSON: {...}"),
+         XML-style wrappers (<json>{...}</json>), and reasoning blocks
+         (<thinking>...</thinking>\n{...}).
 
-    If the content does not begin with a JSON value, returns it unchanged so
-    the agent's error path can surface the malformed-output failure normally.
+    If no valid JSON value is found, returns the (fence-stripped) content
+    unchanged so the agent's downstream error path can surface a malformed-
+    output failure honestly. This is the intended fallback for refusals
+    and empty responses — coercion is silent-best-effort, never silent-fix.
     """
     s = _strip_json_fence(content)
     s = s.lstrip()
     if not s:
         return s
-    if s[0] not in "{[":
-        return s
-    try:
-        value, _end = json.JSONDecoder().raw_decode(s)
-    except json.JSONDecodeError:
-        return s
-    return json.dumps(value)
+    decoder = json.JSONDecoder()
+    # Fast path: content already starts with a JSON value.
+    if s[0] in "{[":
+        try:
+            value, _end = decoder.raw_decode(s)
+            return json.dumps(value)
+        except json.JSONDecodeError:
+            pass
+    # Fallback: scan for the first plausible JSON start and try every
+    # candidate position. Each '{' or '[' is a candidate; raw_decode will
+    # bail on the bad ones and succeed on the first balanced object.
+    for match in re.finditer(r"[{\[]", s):
+        try:
+            value, _end = decoder.raw_decode(s[match.start():])
+            return json.dumps(value)
+        except json.JSONDecodeError:
+            continue
+    return s
 
 
 class LLMResponse(BaseModel):
