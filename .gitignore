@@ -43,9 +43,18 @@ data/cases/nejm/*.json
 data/cases/medqa/*.json
 data/cases/cupcase/*.json
 data/cases/mcr/*.json
+# v2 corpus: NEJM cases are paywalled — do NOT commit the JSON bodies.
+# MCR (MIT) and RareBench (Apache 2.0) JSON bodies ARE committed.
+# Splits.json is committed (just case-IDs, no copyrighted content).
+data/cases/eval_corpus_v2/nejm_sample.json
+!data/cases/eval_corpus_v2/mcr_sample.json
+!data/cases/eval_corpus_v2/rarebench_sample.json
+!data/cases/eval_corpus_v2/splits.json
+!data/cases/eval_corpus_v2/README.md
 !data/cases/**/_schema.json
 data/results/*.json
 data/results/*/
+data/results/.spend_total.txt
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep

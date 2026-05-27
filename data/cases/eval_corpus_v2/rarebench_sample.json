@@ -1,0 +1,206 @@
+[
+  {
+    "case_id": "rb-lirical-01",
+    "source": "RareBench LIRICAL",
+    "corpus": "rarebench",
+    "presentation": "Patient presents with the following clinical phenotype (extracted from the case as Human Phenotype Ontology terms):\n\n  - Thrombocytopenia\n  - Abnormal bleeding\n  - Increased megakaryocyte count\n  - Myelofibrosis\n  - Abnormal number of alpha granules\n\nBased on this clinical phenotype, what is the most likely rare disease diagnosis? Provide a ranked differential of plausible rare diseases.",
+    "ground_truth_diagnosis": "Bleeding disorder, platelet-type, 17",
+    "ground_truth_code": "OMIM:187900",
+    "all_ground_truth_codes": [
+      "OMIM:187900"
+    ],
+    "all_ground_truth_names": [
+      "Bleeding disorder, platelet-type, 17"
+    ],
+    "hpo_codes": [
+      "HP:0001873",
+      "HP:0001892",
+      "HP:0005513",
+      "HP:0011974",
+      "HP:0012528"
+    ],
+    "hpo_names": [
+      "Thrombocytopenia",
+      "Abnormal bleeding",
+      "Increased megakaryocyte count",
+      "Myelofibrosis",
+      "Abnormal number of alpha granules"
+    ]
+  },
+  {
+    "case_id": "rb-lirical-02",
+    "source": "RareBench LIRICAL",
+    "corpus": "rarebench",
+    "presentation": "Patient presents with the following clinical phenotype (extracted from the case as Human Phenotype Ontology terms):\n\n  - Macrocephaly\n  - Hypertelorism\n  - Broad forehead\n  - Low-set ears\n  - Short neck\n  - Broad neck\n  - Downslanted palpebral fissures\n  - Cafe-au-lait spot\n  - Freckling\n  - Bilateral ptosis\n  - Growth delay\n  - Cardiomyopathy\n  - Low posterior hairline\n  - Attention deficit hyperactivity disorder\n  - Feeding difficulties\n\nBased on this clinical phenotype, what is the most likely rare disease diagnosis? Provide a ranked differential of plausible rare diseases.",
+    "ground_truth_diagnosis": "Noonan syndrome 6",
+    "ground_truth_code": "OMIM:613224",
+    "all_ground_truth_codes": [
+      "OMIM:613224"
+    ],
+    "all_ground_truth_names": [
+      "Noonan syndrome 6"
+    ],
+    "hpo_codes": [
+      "HP:0000256",
+      "HP:0000316",
+      "HP:0000337",
+      "HP:0000369",
+      "HP:0000470",
+      "HP:0000475",
+      "HP:0000494",
+      "HP:0000957",
+      "HP:0001480",
+      "HP:0001488",
+      "HP:0001510",
+      "HP:0001638",
+      "HP:0002162",
+      "HP:0007018",
+      "HP:0011968"
+    ],
+    "hpo_names": [
+      "Macrocephaly",
+      "Hypertelorism",
+      "Broad forehead",
+      "Low-set ears",
+      "Short neck",
+      "Broad neck",
+      "Downslanted palpebral fissures",
+      "Cafe-au-lait spot",
+      "Freckling",
+      "Bilateral ptosis",
+      "Growth delay",
+      "Cardiomyopathy",
+      "Low posterior hairline",
+      "Attention deficit hyperactivity disorder",
+      "Feeding difficulties"
+    ]
+  },
+  {
+    "case_id": "rb-lirical-03",
+    "source": "RareBench LIRICAL",
+    "corpus": "rarebench",
+    "presentation": "Patient presents with the following clinical phenotype (extracted from the case as Human Phenotype Ontology terms):\n\n  - Microcephaly\n  - Global developmental delay\n  - Motor delay\n  - Absent speech\n  - EEG abnormality\n  - Intellectual disability, severe\n  - Abnormality of brain morphology\n\nBased on this clinical phenotype, what is the most likely rare disease diagnosis? Provide a ranked differential of plausible rare diseases.",
+    "ground_truth_diagnosis": "Microcephaly, primary autosomal recessive, 6",
+    "ground_truth_code": "OMIM:608393",
+    "all_ground_truth_codes": [
+      "OMIM:608393"
+    ],
+    "all_ground_truth_names": [
+      "Microcephaly, primary autosomal recessive, 6"
+    ],
+    "hpo_codes": [
+      "HP:0000252",
+      "HP:0001263",
+      "HP:0001270",
+      "HP:0001344",
+      "HP:0002353",
+      "HP:0010864",
+      "HP:0012443"
+    ],
+    "hpo_names": [
+      "Microcephaly",
+      "Global developmental delay",
+      "Motor delay",
+      "Absent speech",
+      "EEG abnormality",
+      "Intellectual disability, severe",
+      "Abnormality of brain morphology"
+    ]
+  },
+  {
+    "case_id": "rb-lirical-04",
+    "source": "RareBench LIRICAL",
+    "corpus": "rarebench",
+    "presentation": "Patient presents with the following clinical phenotype (extracted from the case as Human Phenotype Ontology terms):\n\n  - Nystagmus\n  - Pancytopenia\n  - Bone marrow hypocellularity\n\nBased on this clinical phenotype, what is the most likely rare disease diagnosis? Provide a ranked differential of plausible rare diseases.",
+    "ground_truth_diagnosis": "Ataxia-pancytopenia syndrome/Ataxia-Pancytopenia syndrome",
+    "ground_truth_code": "OMIM:159550",
+    "all_ground_truth_codes": [
+      "OMIM:159550",
+      "ORPHA:2585"
+    ],
+    "all_ground_truth_names": [
+      "Ataxia-pancytopenia syndrome/Ataxia-Pancytopenia syndrome",
+      "Ataxia-pancytopenia syndrome/Ataxia-Pancytopenia syndrome"
+    ],
+    "hpo_codes": [
+      "HP:0000639",
+      "HP:0001876",
+      "HP:0005528"
+    ],
+    "hpo_names": [
+      "Nystagmus",
+      "Pancytopenia",
+      "Bone marrow hypocellularity"
+    ]
+  },
+  {
+    "case_id": "rb-lirical-05",
+    "source": "RareBench LIRICAL",
+    "corpus": "rarebench",
+    "presentation": "Patient presents with the following clinical phenotype (extracted from the case as Human Phenotype Ontology terms):\n\n  - Cleft palate\n  - Hypertelorism\n  - Triangular face\n  - Broad forehead\n  - Strabismus\n  - Proptosis\n  - Long eyelashes\n  - Autistic behavior\n  - Impaired social interactions\n  - Reduced eye contact\n  - Hypertrichosis\n  - Prominent fingertip pads\n  - Seizure\n  - Hypotonia\n  - Generalized hypotonia\n  - Absent speech\n  - Joint laxity\n  - Macrodontia\n  - Constipation\n  - Sleep disturbance\n  - Recurrent infections\n  - Elbow hypertrichosis\n  - No social interaction\n  - Incisor macrodontia\n  - Severe global developmental delay\n  - Self-injurious behavior\n\nBased on this clinical phenotype, what is the most likely rare disease diagnosis? Provide a ranked differential of plausible rare diseases.",
+    "ground_truth_diagnosis": "Intellectual developmental disorder with dysmorphic facies and behavioral abnormalities",
+    "ground_truth_code": "OMIM:618089",
+    "all_ground_truth_codes": [
+      "OMIM:618089"
+    ],
+    "all_ground_truth_names": [
+      "Intellectual developmental disorder with dysmorphic facies and behavioral abnormalities"
+    ],
+    "hpo_codes": [
+      "HP:0000175",
+      "HP:0000316",
+      "HP:0000325",
+      "HP:0000337",
+      "HP:0000486",
+      "HP:0000520",
+      "HP:0000527",
+      "HP:0000729",
+      "HP:0000735",
+      "HP:0000817",
+      "HP:0000998",
+      "HP:0001212",
+      "HP:0001250",
+      "HP:0001252",
+      "HP:0001290",
+      "HP:0001344",
+      "HP:0001388",
+      "HP:0001572",
+      "HP:0002019",
+      "HP:0002360",
+      "HP:0002719",
+      "HP:0004780",
+      "HP:0008763",
+      "HP:0011081",
+      "HP:0011344",
+      "HP:0100716"
+    ],
+    "hpo_names": [
+      "Cleft palate",
+      "Hypertelorism",
+      "Triangular face",
+      "Broad forehead",
+      "Strabismus",
+      "Proptosis",
+      "Long eyelashes",
+      "Autistic behavior",
+      "Impaired social interactions",
+      "Reduced eye contact",
+      "Hypertrichosis",
+      "Prominent fingertip pads",
+      "Seizure",
+      "Hypotonia",
+      "Generalized hypotonia",
+      "Absent speech",
+      "Joint laxity",
+      "Macrodontia",
+      "Constipation",
+      "Sleep disturbance",
+      "Recurrent infections",
+      "Elbow hypertrichosis",
+      "No social interaction",
+      "Incisor macrodontia",
+      "Severe global developmental delay",
+      "Self-injurious behavior"
+    ]
+  }
+]
