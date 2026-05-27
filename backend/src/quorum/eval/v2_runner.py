@@ -72,7 +72,6 @@ async def run_arm_a(
         out_path = out_dir / f"{case.case_id}.audit.jsonl"
         if out_path.exists():
             continue
-        gk = Gatekeeper(case, llm_client=llm)
         writer = AuditWriter(
             root=results_dir,
             run_id=run_id,
@@ -81,11 +80,19 @@ async def run_arm_a(
             panel_config_name=panel_config.name,
         )
         try:
-            await panel.run_sequential(
-                case, gk, writer,
-                max_turns=max_turns,
-                commit_threshold=commit_threshold,
-            )
+            if not case.available_findings:
+                # MCR / RareBench cases have no structured findings. The spec
+                # routes these single-turn: skip Gatekeeper and the multi-agent
+                # debate loop, just take Hypothesis's first differential as
+                # the commit.
+                await _run_single_hypothesis(panel, case, writer)
+            else:
+                gk = Gatekeeper(case, llm_client=llm)
+                await panel.run_sequential(
+                    case, gk, writer,
+                    max_turns=max_turns,
+                    commit_threshold=commit_threshold,
+                )
         except Exception as exc:  # noqa: BLE001 — best-effort capture per case
             import traceback
             writer.record_turn(
@@ -168,6 +175,48 @@ async def run_arm_b(
     manifest["finished_at"] = time.time()
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     return out_dir
+
+
+async def _run_single_hypothesis(panel, case, writer) -> None:
+    """Single Hypothesis call path for cases without structured findings.
+
+    Used inside Arm A when an EvalCase has no available_findings (MCR /
+    RareBench). The case still goes through Hypothesis once; the resulting
+    Differential is recorded as the committed posterior.
+    """
+    case_input = CaseInput(
+        case_id=case.case_id,
+        presentation=case.initial_presentation,
+        max_iterations=1,
+    )
+    hyp_msg = await panel.hypothesis.deliberate(case_input, [], 0)
+    posterior = (
+        hyp_msg.structured_output.as_posterior_dict()
+        if hyp_msg.structured_output is not None
+        and hasattr(hyp_msg.structured_output, "as_posterior_dict")
+        else {}
+    )
+    writer.record_turn(
+        agent="hypothesis",
+        message_role="out",
+        content=hyp_msg.content,
+        tokens=hyp_msg.tokens_used,
+        cost_usd=hyp_msg.cost_usd,
+        posterior_at_turn=posterior,
+    )
+    top = max(posterior, key=posterior.get) if posterior else "(no diagnosis)"
+    writer.record_turn(
+        agent="runner",
+        message_role="safety_check",
+        content=f"single-turn (no available_findings) commit on {top!r}",
+        extra={"forced": True, "single_turn": True},
+    )
+    writer.set_final(
+        committed_diagnosis=top,
+        final_posterior=posterior,
+        real_cost_usd=hyp_msg.cost_usd,
+        simulated_cost_usd=0.0,
+    )
 
 
 def _start_manifest(out_dir: Path, panel_config: PanelConfig, arm: Arm, n: int) -> dict:
