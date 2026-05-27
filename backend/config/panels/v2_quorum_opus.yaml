@@ -1,0 +1,23 @@
+name: v2_quorum_opus
+description: |
+  Phase 8 OPTIONAL mini-arm — Calibrated, auditable Quorum on Opus 4.7.
+  Run only if remaining v2 budget >= $20 after the headline EVAL closes.
+  Tests whether the orchestrator architecture continues to lift on a
+  stronger base model or saturates.
+max_iterations: 30
+consensus_threshold: 0.70
+hypothesis:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
+test_chooser:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
+challenger:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
+stewardship:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
+checklist:
+  model: anthropic/claude-opus-4
+  temperature: 0.0
