@@ -17,7 +17,8 @@ import asyncio
 import json
 import logging
 import time
-from typing import AsyncIterator
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, AsyncIterator
 
 from quorum.llm.client import LLMClient
 from quorum.orchestrator.agents import (
@@ -28,6 +29,7 @@ from quorum.orchestrator.agents import (
     TestChooserAgent,
 )
 from quorum.orchestrator.panel_config import PanelConfig
+from quorum.orchestrator.safety import SafetyChecker
 from quorum.orchestrator.schemas import (
     AgentMessage,
     AgentRole,
@@ -36,6 +38,24 @@ from quorum.orchestrator.schemas import (
     FinalVerdict,
     StreamEvent,
 )
+
+if TYPE_CHECKING:
+    from quorum.audit.writer import AuditWriter
+    from quorum.eval.eval_case import EvalCase
+
+
+@dataclass
+class SequentialResult:
+    """Output of Panel.run_sequential — one row per case."""
+
+    case_id: str
+    committed_diagnosis: str
+    final_posterior: dict[str, float]
+    n_turns: int
+    simulated_cost_usd: float = 0.0
+    real_cost_usd: float = 0.0
+    forced: bool = False  # True if max_turns or safety cost-override forced commit
+    revealed_findings: list[str] = field(default_factory=list)
 
 logger = logging.getLogger(__name__)
 
@@ -357,6 +377,283 @@ class Panel:
 
         verdict = self._build_verdict(case, transcript, termination, iterations_used)
         yield StreamEvent(event="verdict", data=verdict.model_dump(mode="json"))
+
+    # ------------------------------------------------------------------
+    # Sequential diagnosis (v2 — SDBench-style multi-turn with Gatekeeper)
+    # ------------------------------------------------------------------
+
+    async def run_sequential(
+        self,
+        case: "EvalCase",
+        gatekeeper,
+        audit_writer: "AuditWriter",
+        *,
+        max_turns: int = 30,
+        commit_threshold: float = 0.70,
+        safety_checker: SafetyChecker | None = None,
+    ) -> SequentialResult:
+        """Multi-turn sequential diagnosis with Gatekeeper + audit + safety.
+
+        Per turn:
+          1. Hypothesis refines its posterior given accumulated evidence.
+          2. TestChooser proposes the next query (NextTest.name).
+          3. Gatekeeper reveals (or refuses) the requested finding.
+          4. Challenger + Stewardship + Checklist react to the new evidence.
+          5. SafetyChecker evaluates commit conditions.
+          6. If safety clean and commit signal raised → commit, return.
+
+        Commit signals (any one is sufficient before safety check):
+          - top posterior >= commit_threshold
+          - Stewardship `accept_test` is False (vote stop)
+          - Checklist `recommend_continue` is False AND `consistent` is True
+            (panel says enough, no flagged inconsistencies)
+
+        If the loop exhausts max_turns, a final commit is forced on the
+        current top diagnosis (forced=True).
+        """
+        from quorum.eval.eval_case import Finding  # local import to avoid cycle
+
+        # Require the full 5-agent panel; bail early if any slot is missing.
+        for slot_name in ("hypothesis", "test_chooser", "challenger", "stewardship", "checklist"):
+            if getattr(self, slot_name) is None:
+                raise ValueError(
+                    f"run_sequential requires all 5 agents; missing slot: {slot_name}"
+                )
+
+        safety = safety_checker or SafetyChecker()
+        revealed: list[Finding] = []
+        transcript: list[AgentMessage] = []
+        total_real_cost = 0.0
+        last_posterior: dict[str, float] = {}
+
+        for turn in range(1, max_turns + 1):
+            case_input = self._build_sequential_case_input(case, revealed)
+            iteration = turn - 1
+
+            # ----- Hypothesis -----
+            hyp_msg = await self.hypothesis.deliberate(case_input, list(transcript), iteration)
+            transcript.append(hyp_msg)
+            total_real_cost += hyp_msg.cost_usd
+            if isinstance(hyp_msg.structured_output, Differential):
+                posterior = hyp_msg.structured_output.as_posterior_dict()
+            else:
+                posterior = {}
+            last_posterior = posterior
+            audit_writer.record_turn(
+                agent="hypothesis",
+                message_role="out",
+                content=hyp_msg.content,
+                tokens=hyp_msg.tokens_used,
+                cost_usd=hyp_msg.cost_usd,
+                posterior_at_turn=posterior,
+            )
+
+            # ----- TestChooser -----
+            tc_msg = await self.test_chooser.deliberate(case_input, list(transcript), iteration)
+            transcript.append(tc_msg)
+            total_real_cost += tc_msg.cost_usd
+            query = (
+                tc_msg.structured_output.name
+                if tc_msg.structured_output is not None
+                and hasattr(tc_msg.structured_output, "name")
+                else ""
+            )
+            audit_writer.record_turn(
+                agent="test_chooser",
+                message_role="out",
+                content=tc_msg.content,
+                tokens=tc_msg.tokens_used,
+                cost_usd=tc_msg.cost_usd,
+                extra={"query": query},
+            )
+
+            # ----- Gatekeeper -----
+            audit_writer.record_turn(
+                agent="gatekeeper",
+                message_role="gatekeeper_query",
+                content=query,
+            )
+            try:
+                gk_response = await gatekeeper.query(query)
+            except RuntimeError as exc:
+                # Gatekeeper guard hit (max turns or max cost). Force-commit.
+                audit_writer.record_turn(
+                    agent="gatekeeper",
+                    message_role="gatekeeper_response",
+                    content=f"halted: {exc}",
+                    extra={"halted": True},
+                )
+                return self._finalize_forced(
+                    case, audit_writer, last_posterior, turn, gatekeeper.simulated_cost,
+                    total_real_cost, revealed, reason=str(exc),
+                )
+            audit_writer.record_turn(
+                agent="gatekeeper",
+                message_role="gatekeeper_response",
+                content=gk_response.content,
+                cost_usd=gk_response.cost_usd,
+                extra={
+                    "matched": gk_response.matched,
+                    "matched_label": gk_response.matched_label,
+                },
+            )
+            if gk_response.matched:
+                revealed.append(
+                    Finding(
+                        category="revealed",
+                        label=gk_response.matched_label or "(unknown)",
+                        content=gk_response.content,
+                    )
+                )
+
+            # ----- Challenger -----
+            chal_msg = await self.challenger.deliberate(case_input, list(transcript), iteration)
+            transcript.append(chal_msg)
+            total_real_cost += chal_msg.cost_usd
+            chal_dict = chal_msg.structured_output if isinstance(chal_msg.structured_output, dict) else {}
+            audit_writer.record_turn(
+                agent="challenger",
+                message_role="out",
+                content=chal_msg.content,
+                tokens=chal_msg.tokens_used,
+                cost_usd=chal_msg.cost_usd,
+                extra=dict(chal_dict),
+            )
+
+            # ----- Stewardship -----
+            stew_msg = await self.stewardship.deliberate(case_input, list(transcript), iteration)
+            transcript.append(stew_msg)
+            total_real_cost += stew_msg.cost_usd
+            stew_dict = stew_msg.structured_output if isinstance(stew_msg.structured_output, dict) else {}
+            audit_writer.record_turn(
+                agent="stewardship",
+                message_role="out",
+                content=stew_msg.content,
+                tokens=stew_msg.tokens_used,
+                cost_usd=stew_msg.cost_usd,
+                extra={k: v for k, v in stew_dict.items() if k != "cheaper_alternative"},
+            )
+
+            # ----- Checklist -----
+            chk_msg = await self.checklist.deliberate(case_input, list(transcript), iteration)
+            transcript.append(chk_msg)
+            total_real_cost += chk_msg.cost_usd
+            chk_dict = chk_msg.structured_output if isinstance(chk_msg.structured_output, dict) else {}
+            audit_writer.record_turn(
+                agent="checklist",
+                message_role="out",
+                content=chk_msg.content,
+                tokens=chk_msg.tokens_used,
+                cost_usd=chk_msg.cost_usd,
+                extra=dict(chk_dict),
+            )
+
+            # ----- Commit decision -----
+            if not posterior:
+                continue
+            top_dx = max(posterior, key=posterior.get)
+            top_p = posterior[top_dx]
+
+            stew_accept = stew_dict.get("accept_test", True)
+            chk_continue = chk_dict.get("recommend_continue", True)
+            chk_consistent = chk_dict.get("consistent", True)
+            chk_flags = chk_dict.get("flags", [])
+            chal_alt = chal_dict.get("alternative_to_consider", "none")
+
+            commit_signal = (
+                top_p >= commit_threshold
+                or stew_accept is False
+                or (chk_continue is False and chk_consistent is True)
+            )
+
+            if commit_signal:
+                verdict = safety.check_commit(
+                    committed_dx=top_dx,
+                    hypothesis_shortlist=posterior,
+                    challenger_top=chal_alt,
+                    checklist_concerns=list(chk_flags),
+                    n_findings_queried=len(revealed),
+                    simulated_cost=gatekeeper.simulated_cost,
+                )
+                audit_writer.record_turn(
+                    agent="safety_checker",
+                    message_role="safety_check",
+                    content=verdict.reason or "OK",
+                    extra={"blocked": verdict.blocked, "forced": verdict.forced},
+                )
+                if not verdict.blocked:
+                    audit_writer.set_final(
+                        committed_diagnosis=top_dx,
+                        final_posterior=posterior,
+                        real_cost_usd=total_real_cost,
+                        simulated_cost_usd=gatekeeper.simulated_cost,
+                    )
+                    return SequentialResult(
+                        case_id=case.case_id,
+                        committed_diagnosis=top_dx,
+                        final_posterior=posterior,
+                        n_turns=turn,
+                        simulated_cost_usd=gatekeeper.simulated_cost,
+                        real_cost_usd=total_real_cost,
+                        forced=verdict.forced,
+                        revealed_findings=[f.label for f in revealed],
+                    )
+            # otherwise: continue to next turn
+
+        # Loop exhausted → force commit on current top
+        return self._finalize_forced(
+            case, audit_writer, last_posterior, max_turns, gatekeeper.simulated_cost,
+            total_real_cost, revealed, reason="max turns reached",
+        )
+
+    def _build_sequential_case_input(self, case: "EvalCase", revealed: list) -> CaseInput:
+        presentation = case.initial_presentation
+        if revealed:
+            lines = ["", "## Revealed findings"]
+            for f in revealed:
+                lines.append(f"- ({f.category}) {f.label}: {f.content}")
+            presentation = presentation + "\n" + "\n".join(lines)
+        return CaseInput(
+            case_id=case.case_id,
+            presentation=presentation,
+            max_iterations=1,
+        )
+
+    def _finalize_forced(
+        self,
+        case: "EvalCase",
+        audit_writer: "AuditWriter",
+        posterior: dict[str, float],
+        n_turns: int,
+        simulated_cost: float,
+        real_cost: float,
+        revealed: list,
+        *,
+        reason: str,
+    ) -> SequentialResult:
+        top_dx = max(posterior, key=posterior.get) if posterior else "(no diagnosis)"
+        audit_writer.record_turn(
+            agent="safety_checker",
+            message_role="safety_check",
+            content=f"{reason}: forced commit on {top_dx!r}",
+            extra={"blocked": False, "forced": True},
+        )
+        audit_writer.set_final(
+            committed_diagnosis=top_dx,
+            final_posterior=posterior,
+            real_cost_usd=real_cost,
+            simulated_cost_usd=simulated_cost,
+        )
+        return SequentialResult(
+            case_id=case.case_id,
+            committed_diagnosis=top_dx,
+            final_posterior=posterior,
+            n_turns=n_turns,
+            simulated_cost_usd=simulated_cost,
+            real_cost_usd=real_cost,
+            forced=True,
+            revealed_findings=[f.label for f in revealed],
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers
