@@ -6,4 +6,4 @@ consensus_threshold: 0.0
 hypothesis:
   model: anthropic/claude-opus-4
   temperature: 0.0
-cost_prior_usd: 0.080783
+cost_prior_usd: 0.091135

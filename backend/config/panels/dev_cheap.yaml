@@ -19,4 +19,4 @@ stewardship:
 checklist:
   model: meta-llama/llama-3.3-70b-instruct
   temperature: 0.0
-cost_prior_usd: 0.010366
+cost_prior_usd: 0.008921
