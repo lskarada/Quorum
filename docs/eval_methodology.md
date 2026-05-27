@@ -206,3 +206,100 @@ cd backend && uv run quorum-eval score data/results/<run_id> --corpus medqa
 # Render report.md
 cd backend && uv run quorum-eval report data/results/<run_id> --corpus medqa
 ```
+
+---
+
+## v2: Calibrated-Auditable MAI-DxO
+
+The v2 headline eval pivots from MedQA multiple-choice into an
+SDBench-flavored sequential diagnostic encounter. See
+[`docs/results_v2.md`](results_v2.md) for the headline numbers and
+[`docs/superpowers/specs/2026-05-26-quorum-calibrated-auditable-mai-dxo-design.md`](superpowers/specs/2026-05-26-quorum-calibrated-auditable-mai-dxo-design.md)
+for the full design.
+
+### v2 corpus
+
+35-case open corpus committed to `data/cases/eval_corpus_v2/`:
+
+| Source | n | License | Has `available_findings`? |
+|---|---|---|---|
+| NEJM CPC (Sep 2025–May 2026) | 20 | Paywalled (case bodies gitignored) | yes |
+| MedCaseReasoning | 10 | MIT | no (single-turn) |
+| RareBench LIRICAL | 5 | Apache 2.0 | no (single-turn) |
+
+`splits.json` partitions the 35 cases into 5 TUNE + 30 EVAL via a
+deterministic random shuffle with seed 20260526. **EVAL is run once**;
+`splits.json` is frozen at the build commit. NEJM case JSON bodies
+are *not* redistributed (copyright); MCR + RB JSON bodies are.
+
+### v2 architecture additions
+
+Three new modules sit alongside the existing 5-agent panel:
+
+1. **Gatekeeper** (`backend/src/quorum/gatekeeper/`) — holds the case
+   `available_findings` and reveals them only on agent query. Tracks
+   simulated CMS-style test cost. Hybrid matcher: substring first
+   (free), Haiku 4.5 fallback for paraphrased queries.
+2. **AuditTrail** (`backend/src/quorum/audit/`) — append-only JSONL
+   per case capturing every agent message, Gatekeeper query/response,
+   safety verdict, and final posterior. Schema versioned (`audit.v1`).
+3. **Calibration** (`backend/src/quorum/calibration/`) — Brier score
+   (multi-class form, truth-absent → +1.0 penalty) and 10-bin
+   equal-width ECE.
+
+Plus a deterministic **SafetyChecker** (`orchestrator/safety.py`) that
+gates every commit against five rules (min findings, no flagged
+contradictions, shortlist membership, panel agreement, cost-overrun
+forcing).
+
+### v2 three-arm design
+
+- **Arm A — Quorum-Calibrated**: 5-agent Sonnet 4.6 panel + Gatekeeper
+  + SafetyChecker + AuditTrail. Sequential mode with `commit_threshold=0.70`,
+  `max_turns=8` (down from spec's 30 for cost discipline). Cases without
+  `available_findings` route to a single Hypothesis call (matches spec's
+  "single-turn for MCR/RB").
+- **Arm B — Single Sonnet**: one Hypothesis call, no orchestration. Same
+  base model as Arm A; quantifies the orchestrator lift.
+- **Reference** (literature, no API): MAI-DxO + o3 = 85.5% (Microsoft,
+  n=304); physicians = 20% (Microsoft).
+
+### v2 scoring
+
+- **Top-1 accuracy** via LLM-as-judge (Sonnet 4.6) against
+  `ground_truth_diagnosis` + `acceptable_partial_credit` synonyms.
+  Output: `full_credit` / `partial_credit` / `no_credit`.
+- **Brier (mean per-case)** from `final_posterior` against ground truth.
+- **ECE (10-bin equal-width)** over the EVAL set.
+- **Audit completeness rate**: fraction of the 7 expected event types
+  (`hypothesis`, `test_chooser`, `challenger`, `stewardship`, `checklist`,
+  `gatekeeper`, `safety_checker`) that appear at least once per case audit.
+- **Cost**: real Anthropic spend (per-case + total) plus simulated
+  test cost from the Gatekeeper CMS table.
+
+### v2 reproducibility
+
+```bash
+# Build the deterministic TUNE/EVAL split (only needs to run once)
+python3 backend/scripts/build_eval_splits.py
+
+# Run Arm A
+set -a && source .env && set +a
+uv run python backend/scripts/run_v2_benchmark.py \
+    --arm arm_a --panel v2_quorum_calibrated --split eval \
+    --max-turns 8 --run-id <my-run-id> --confirm-cost
+
+# Run Arm B
+uv run python backend/scripts/run_v2_benchmark.py \
+    --arm arm_b --panel v2_single_sonnet --split eval \
+    --run-id <my-run-id-b> --confirm-cost
+
+# Judge both arms
+uv run python backend/scripts/judge_v2_run.py data/results/<my-run-id>
+uv run python backend/scripts/judge_v2_run.py data/results/<my-run-id-b>
+
+# Aggregate headline metrics
+uv run python backend/scripts/compute_v2_metrics.py data/results/<my-run-id>
+```
+
+Audit trails are written to `data/results/<run_id>/<case_id>.audit.jsonl`.
