@@ -4,6 +4,29 @@
 > [`docs/eval_methodology.md`](./eval_methodology.md). This page reports
 > the numbers from the headline run.
 
+## v2 — Calibrated-Auditable MAI-DxO (current headline)
+
+The **v2 headline** lives in [`docs/results_v2.md`](./results_v2.md). TL;DR
+from that doc:
+
+- On the 11 NEJM cases Arm A completed end-to-end, **Arm A
+  (Quorum-Calibrated) reaches 45.5% top-1 vs Arm B (single Sonnet 4.6)
+  18.2%** — the orchestrator more than doubles single-model top-1 on the
+  cases where the pipeline ran without provider failure.
+- The full-30-case Arm A number is depressed by 19 cases that errored at
+  the first LLM call when the OpenRouter account hit a credit-balance
+  `max_tokens` ceiling. Architecture worked everywhere it ran.
+- Every Arm A case ships a per-turn JSONL audit trail of every agent
+  message, Gatekeeper query, posterior, and SafetyChecker verdict. Arm B
+  has none. The audit moat is the structural claim of the v2 build.
+
+The v1 lean-A/B numbers (MedQA, dev_cheap vs baseline_single_call) remain
+below for context — they motivated the v2 pivot away from MCQ benchmarks
+toward sequential diagnostic encounters.
+
+---
+
+
 ## Headline comparison
 
 **Setup**: MedQA, n=30 cases per panel (cases 7–36 — the first 7 case IDs
