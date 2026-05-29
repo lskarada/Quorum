@@ -35,6 +35,7 @@ class TestChooserAgent(Agent):
             model=self.model,
             response_format={"type": "json_object"},
             max_tokens=2048,
+            temperature=self.temperature,
         )
         data = json.loads(resp.content)
         next_test = NextTest.model_validate(data)

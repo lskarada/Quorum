@@ -167,6 +167,7 @@ class LLMClient:
         model: str | None = None,
         response_format: dict | None = None,
         max_tokens: int = 4096,
+        temperature: float | None = None,
     ) -> LLMResponse:
         # QUORUM_DEFAULT_MAX_TOKENS env var caps max_tokens for ALL calls.
         # Useful for low-credit recovery runs where the provider's balance
@@ -179,6 +180,8 @@ class LLMClient:
             "messages": messages,
             "max_tokens": max_tokens,
         }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
         if response_format is not None:
             kwargs["response_format"] = response_format
 

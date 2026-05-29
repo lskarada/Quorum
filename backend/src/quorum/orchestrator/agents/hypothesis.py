@@ -45,6 +45,8 @@ class HypothesisAgent(Agent):
             messages=messages,
             model=self.model,
             response_format={"type": "json_object"},
+            max_tokens=6144,
+            temperature=self.temperature,
         )
 
         try:
