@@ -2,7 +2,7 @@
 
 Thin wrapper around quorum.eval.v2_runner. Named explicitly so the
 spend-gate PreToolUse hook recognizes invocations and applies the
-$75 hard stop / $70 warn check against data/results/.spend_total.txt.
+$142 hard stop / $135 warn check against data/results/.spend_total.txt.
 
 Examples
 --------
@@ -34,7 +34,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="v2 benchmark runner")
     ap.add_argument("--arm", choices=("arm_a", "arm_b"), required=True)
     ap.add_argument("--panel", required=True)
-    ap.add_argument("--split", choices=("tune", "eval"), default=None)
+    ap.add_argument("--split", choices=("tune", "eval", "dev"), default=None)
     ap.add_argument("--case-id", default=None)
     ap.add_argument("-n", type=int, default=None)
     ap.add_argument("--run-id", default=None)

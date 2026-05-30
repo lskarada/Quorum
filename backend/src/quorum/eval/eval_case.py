@@ -92,3 +92,23 @@ def load_corpus(split: Literal["tune", "eval"] | None = None) -> list[EvalCase]:
     splits = json.loads((CORPUS_DIR / "splits.json").read_text())
     ids = set(splits[split])
     return [c for c in all_cases if c.case_id in ids]
+
+
+def load_dev_corpus() -> list[EvalCase]:
+    """Load the 26-case DEV tuning set, held SEPARATE from splits.json.
+
+    DEV lives in its own files (dev_nejm_sample.json + dev_mcr_sample.json) by
+    design, so a splits.json re-split can never pull a DEV case into TUNE/EVAL.
+    The NEJM dev file is paywalled + gitignored (may be absent on a clean clone);
+    the MCR dev file is public + committed. Both reuse the existing per-corpus
+    loaders, so NEJM cases carry available_findings[] (full Gatekeeper path) and
+    MCR cases are flat presentation-only (single-Hypothesis path).
+    """
+    cases: list[EvalCase] = []
+    nejm_path = CORPUS_DIR / "dev_nejm_sample.json"
+    if nejm_path.exists():
+        cases += [_load_nejm(c) for c in json.loads(nejm_path.read_text())]
+    mcr_path = CORPUS_DIR / "dev_mcr_sample.json"
+    if mcr_path.exists():
+        cases += [_load_mcr(c) for c in json.loads(mcr_path.read_text())]
+    return cases
