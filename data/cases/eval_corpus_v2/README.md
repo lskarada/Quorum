@@ -48,3 +48,29 @@ The 35-case corpus is split into:
 - **EVAL** (30 cases): held out. Run ONCE for the headline number.
 
 The specific split is recorded in `data/cases/eval_corpus_v2/splits.json` (see spec doc).
+
+## DEV set (tuning corpus, held out from EVAL)
+
+The v2.1 Accuracy-Maximization Campaign added a **26-case DEV set** so the optimization loop
+has real statistical traction without ever touching the 30-case EVAL. The DEV set lives in two
+files, **separate from `nejm_sample.json` / `mcr_sample.json` by design** so that a re-split of
+`splits.json` can never pull a DEV case into TUNE/EVAL. Every DEV id is disjoint from
+TUNE ∪ EVAL by construction.
+
+### `dev_nejm_sample.json` — 11 NEJM CPC cases (2025 #15–25)
+- **Gitignored + paywalled** — NEJM text requires institutional licensing; never committed,
+  redistributed, or published. Only the citation-level manifest is shared (see the campaign
+  brief `docs/overnight/2026-05-30-brief.md`).
+- Rich schema: `initial_presentation`, `available_findings[]` (drives progressive Gatekeeper
+  reveal), `hidden_discussant_differential`, `ground_truth_*`.
+
+### `dev_mcr_sample.json` — 15 MedCaseReasoning/PMC cases
+- **Committed** (MIT-licensed, public PMC case reports) — allowlisted in `.gitignore`.
+- Schema: `case_id`, `source`, `corpus`, `presentation`, `ground_truth_diagnosis`, `reasoning_trace`.
+- **Reproducibility**: minted by `backend/scripts/build_dev_augment.py` with a fixed seed
+  (`20260530`). The sampler excludes every PMC id already in `splits.json` (tune+eval) **and**
+  every NEJM DEV id, then `random.Random(20260530).sample(candidates, 15)` over the sorted
+  remaining pool. Re-running the script reproduces the exact 15 ids byte-for-byte:
+  ```bash
+  python3 backend/scripts/build_dev_augment.py
+  ```
