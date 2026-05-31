@@ -41,6 +41,8 @@ def main() -> None:
     ap.add_argument("--max-turns", type=int, default=30)
     ap.add_argument("--commit-threshold", type=float, default=0.70)
     ap.add_argument("--confirm-cost", action="store_true")
+    ap.add_argument("--split-file", default=None)
+    ap.add_argument("--split-key", default=None)
     args = ap.parse_args()
 
     out = asyncio.run(
@@ -54,6 +56,8 @@ def main() -> None:
             max_turns=args.max_turns,
             commit_threshold=args.commit_threshold,
             confirm_cost=args.confirm_cost,
+            split_file=args.split_file,
+            split_key=args.split_key,
         )
     )
     print(f"Wrote results to {out}")

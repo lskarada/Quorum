@@ -276,16 +276,24 @@ async def run(
     max_turns: int = 30,
     commit_threshold: float = 0.70,
     confirm_cost: bool = False,
+    split_file: str | None = None,
+    split_key: str | None = None,
 ) -> Path:
     """High-level entry used by scripts."""
     panel_config = next(
         c for c in PanelConfig.list_available() if c.name == panel_name
     )
-    cases = load_v2_cases(split=split, case_id=case_id)
+    cases = load_v2_cases(
+        split=split, case_id=case_id,
+        split_file=split_file, split_key=split_key,
+    )
     if n is not None:
         cases = cases[:n]
     if not cases:
-        raise ValueError(f"No cases matched split={split!r} case_id={case_id!r}")
+        raise ValueError(
+            f"No cases matched split={split!r} case_id={case_id!r} "
+            f"split_file={split_file!r} split_key={split_key!r}"
+        )
 
     repo_root = Path(__file__).resolve().parents[4]
     results_dir = results_dir or (repo_root / "data" / "results")
@@ -309,7 +317,7 @@ if __name__ == "__main__":  # pragma: no cover
     ap = argparse.ArgumentParser(description="v2 benchmark runner")
     ap.add_argument("--arm", choices=("arm_a", "arm_b"), required=True)
     ap.add_argument("--panel", required=True)
-    ap.add_argument("--split", choices=("tune", "eval"), default=None)
+    ap.add_argument("--split", choices=("tune", "eval", "dev"), default=None)
     ap.add_argument("--case-id", default=None)
     ap.add_argument("-n", type=int, default=None)
     ap.add_argument("--run-id", default=None)
@@ -320,39 +328,19 @@ if __name__ == "__main__":  # pragma: no cover
     ap.add_argument("--split-key", default=None)
     args = ap.parse_args()
 
-    if args.split_file is not None:
-        cases = load_v2_cases(split_file=args.split_file, split_key=args.split_key)
-        if args.n is not None:
-            cases = cases[: args.n]
-        if not cases:
-            raise ValueError(f"No cases matched --split-file={args.split_file!r} --split-key={args.split_key!r}")
-        panel_config = next(
-            c for c in __import__("quorum.orchestrator.panel_config", fromlist=["PanelConfig"]).PanelConfig.list_available()
-            if c.name == args.panel
+    out = asyncio.run(
+        run(
+            args.arm,
+            panel_name=args.panel,
+            split=args.split,
+            case_id=args.case_id,
+            n=args.n,
+            run_id=args.run_id,
+            max_turns=args.max_turns,
+            commit_threshold=args.commit_threshold,
+            confirm_cost=args.confirm_cost,
+            split_file=args.split_file,
+            split_key=args.split_key,
         )
-        out = asyncio.run(
-            (run_arm_a if args.arm == "arm_a" else run_arm_b)(
-                cases, panel_config, None,
-                run_id=args.run_id,
-                **({
-                    "max_turns": args.max_turns,
-                    "commit_threshold": args.commit_threshold,
-                    "confirm_cost": args.confirm_cost,
-                } if args.arm == "arm_a" else {"confirm_cost": args.confirm_cost}),
-            )
-        )
-    else:
-        out = asyncio.run(
-            run(
-                args.arm,
-                panel_name=args.panel,
-                split=args.split,
-                case_id=args.case_id,
-                n=args.n,
-                run_id=args.run_id,
-                max_turns=args.max_turns,
-                commit_threshold=args.commit_threshold,
-                confirm_cost=args.confirm_cost,
-            )
-        )
+    )
     print(f"Wrote results to {out}")
