@@ -48,6 +48,7 @@ def main() -> None:
     ap.add_argument("--confirm-cost", action="store_true")
     ap.add_argument("--split-file", default=None)
     ap.add_argument("--split-key", default=None)
+    ap.add_argument("--temperature", type=float, default=None)
     args = ap.parse_args()
 
     out = asyncio.run(
@@ -63,6 +64,7 @@ def main() -> None:
             confirm_cost=args.confirm_cost,
             split_file=args.split_file,
             split_key=args.split_key,
+            temperature=args.temperature,
         )
     )
     print(f"Wrote results to {out}")

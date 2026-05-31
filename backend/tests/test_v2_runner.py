@@ -116,6 +116,40 @@ def _checklist_msg() -> AgentMessage:
     )
 
 
+def test_with_temperature_overrides_all_present_slots():
+    """SC override sets every present agent slot's temperature, deep-copied."""
+    from quorum.eval.v2_runner import _with_temperature
+
+    cfg = _panel("v2_quorum_calibrated")
+    out = _with_temperature(cfg, 0.7)
+    assert out.hypothesis.temperature == 0.7
+    assert out.test_chooser.temperature == 0.7
+    assert out.challenger.temperature == 0.7
+    assert out.stewardship.temperature == 0.7
+    assert out.checklist.temperature == 0.7
+    # Deep copy: the shared list_available() instance is untouched.
+    assert cfg.hypothesis.temperature == 0.0
+
+
+def test_with_temperature_skips_absent_slots():
+    """Single-agent config (hypothesis only) keeps None slots None."""
+    from quorum.eval.v2_runner import _with_temperature
+
+    cfg = _panel("v2_single_sonnet")
+    out = _with_temperature(cfg, 0.4)
+    assert out.hypothesis.temperature == 0.4
+    assert out.test_chooser is None
+
+
+def test_with_temperature_none_is_noop():
+    """temperature=None returns the config unchanged (deterministic default)."""
+    from quorum.eval.v2_runner import _with_temperature
+
+    cfg = _panel("v2_quorum_calibrated")
+    out = _with_temperature(cfg, None)
+    assert out is cfg
+
+
 async def test_run_arm_a_writes_audit_jsonl(tmp_path, monkeypatch):
     """run_arm_a happy path: writes audit JSONL + manifest, includes posterior."""
     llm = _llm_stub()

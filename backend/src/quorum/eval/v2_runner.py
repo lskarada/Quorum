@@ -264,6 +264,24 @@ def load_v2_cases(
     return load_corpus(split=split)
 
 
+def _with_temperature(config: PanelConfig, temperature: float | None) -> PanelConfig:
+    """Return a deep copy of `config` with every present agent slot's
+    temperature set to `temperature`.
+
+    Used for self-consistency: the v2 panels ship temperature 0.0, but SC needs
+    sampling diversity across the k runs. `temperature=None` is a no-op (returns
+    the config unchanged) so deterministic baselines keep their 0.0 default.
+    """
+    if temperature is None:
+        return config
+    new = config.model_copy(deep=True)
+    for slot_name in ("hypothesis", "test_chooser", "challenger", "stewardship", "checklist"):
+        slot = getattr(new, slot_name)
+        if slot is not None:
+            slot.temperature = temperature
+    return new
+
+
 async def run(
     arm: Arm,
     *,
@@ -278,11 +296,13 @@ async def run(
     confirm_cost: bool = False,
     split_file: str | None = None,
     split_key: str | None = None,
+    temperature: float | None = None,
 ) -> Path:
     """High-level entry used by scripts."""
     panel_config = next(
         c for c in PanelConfig.list_available() if c.name == panel_name
     )
+    panel_config = _with_temperature(panel_config, temperature)
     cases = load_v2_cases(
         split=split, case_id=case_id,
         split_file=split_file, split_key=split_key,
@@ -326,6 +346,7 @@ if __name__ == "__main__":  # pragma: no cover
     ap.add_argument("--confirm-cost", action="store_true")
     ap.add_argument("--split-file", default=None)
     ap.add_argument("--split-key", default=None)
+    ap.add_argument("--temperature", type=float, default=None)
     args = ap.parse_args()
 
     out = asyncio.run(
@@ -341,6 +362,7 @@ if __name__ == "__main__":  # pragma: no cover
             confirm_cost=args.confirm_cost,
             split_file=args.split_file,
             split_key=args.split_key,
+            temperature=args.temperature,
         )
     )
     print(f"Wrote results to {out}")
