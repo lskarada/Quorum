@@ -61,6 +61,35 @@ def main(run_dir: Path) -> dict:
         1 for a in audits if judge.get(a["case_id"], {}).get("score") == "partial_credit"
     )
 
+    # Per-corpus segmentation. NEJM-CPC is the only subset comparable to
+    # MAI-DxO's benchmark (304 NEJM CPCs); MCR is presentation-only (no
+    # Gatekeeper loop) and RareBench is rare-disease (out of MAI-DxO scope),
+    # so both are reported separately rather than silently dragging the
+    # headline. NOTE: top_1_or_partial is the metric comparable to MAI-DxO's
+    # >=4/5 "leads-to-correct-treatment" rubric; top_1_accuracy (full only) is
+    # strictly stricter and must NOT be compared against their published number.
+    by_corpus: dict[str, dict[str, int]] = {}
+    for a in audits:
+        case = cases_by_id.get(a["case_id"])
+        corpus = case.corpus if case is not None else "unknown"
+        score = judge.get(a["case_id"], {}).get("score")
+        bucket = by_corpus.setdefault(corpus, {"n": 0, "full": 0, "partial": 0})
+        bucket["n"] += 1
+        if score == "full_credit":
+            bucket["full"] += 1
+        elif score == "partial_credit":
+            bucket["partial"] += 1
+
+    def _rates(b: dict[str, int]) -> dict[str, float | int | None]:
+        return {
+            "n": b["n"],
+            "top_1": b["full"] / b["n"] if b["n"] else None,
+            "top_1_or_partial": (b["full"] + b["partial"]) / b["n"] if b["n"] else None,
+        }
+
+    by_corpus_rates = {c: _rates(b) for c, b in sorted(by_corpus.items())}
+    nejm_bucket = by_corpus.get("nejm", {"n": 0, "full": 0, "partial": 0})
+
     # Calibration: use final_posterior + ground truth
     posteriors: list[dict[str, float]] = []
     truths: list[str] = []
@@ -86,6 +115,10 @@ def main(run_dir: Path) -> dict:
         "n_partial_credit": n_partial,
         "top_1_accuracy": n_full / n,
         "top_1_or_partial": (n_full + n_partial) / n,
+        # MAI-DxO-comparable headline: NEJM-CPC subset only.
+        "nejm_top_1": _rates(nejm_bucket)["top_1"],
+        "nejm_top_1_or_partial": _rates(nejm_bucket)["top_1_or_partial"],
+        "by_corpus": by_corpus_rates,
         "mean_brier": mean_brier,
         "ece": ece,
         "audit_completeness_rate": (
