@@ -26,8 +26,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import pathlib
+
+from dotenv import load_dotenv
 
 from quorum.eval.v2_runner import run
+
+load_dotenv(pathlib.Path(__file__).resolve().parents[2] / ".env")
 
 
 def main() -> None:
