@@ -17,7 +17,7 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from quorum.eval.eval_case import load_corpus
+from quorum.eval.eval_case import load_corpus, load_dev_corpus
 from quorum.eval.judge import judge_run_dir
 from quorum.llm.client import LLMClient
 
@@ -31,7 +31,9 @@ def main() -> None:
     if not args.run_dir.exists():
         raise SystemExit(f"run dir not found: {args.run_dir}")
 
-    cases_by_id = {c.case_id: c for c in load_corpus()}
+    # Union with DEV so DEV run dirs resolve ground-truth too; ids are disjoint
+    # from TUNE/EVAL, so eval/tune judging is unaffected.
+    cases_by_id = {c.case_id: c for c in (load_corpus() + load_dev_corpus())}
     llm = LLMClient()
     results = asyncio.run(
         judge_run_dir(args.run_dir, cases_by_id, llm, model=args.judge_model)

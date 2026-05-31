@@ -18,8 +18,7 @@ import sys
 from pathlib import Path
 
 from quorum.calibration.metrics import compute_brier, compute_ece
-from quorum.eval.eval_case import load_corpus
-
+from quorum.eval.eval_case import load_corpus, load_dev_corpus
 
 REQUIRED_AUDIT_AGENTS = {
     "hypothesis", "test_chooser", "challenger", "stewardship",
@@ -28,7 +27,9 @@ REQUIRED_AUDIT_AGENTS = {
 
 
 def main(run_dir: Path) -> dict:
-    cases_by_id = {c.case_id: c for c in load_corpus()}
+    # Union with DEV so DEV run dirs resolve ground-truth for Brier/ECE; ids are
+    # disjoint from TUNE/EVAL, so eval/tune metrics are unaffected.
+    cases_by_id = {c.case_id: c for c in (load_corpus() + load_dev_corpus())}
     audits = []
     audit_completeness_scores = []
 

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Literal
 
 from quorum.audit.writer import AuditWriter
-from quorum.eval.eval_case import EvalCase, load_corpus
+from quorum.eval.eval_case import EvalCase, load_corpus, load_dev_corpus
 from quorum.gatekeeper.gatekeeper import Gatekeeper
 from quorum.llm.client import LLMClient
 from quorum.orchestrator.panel import Panel
@@ -28,7 +28,7 @@ from quorum.orchestrator.panel_config import PanelConfig
 from quorum.orchestrator.schemas import CaseInput
 
 Arm = Literal["arm_a", "arm_b"]
-Split = Literal["tune", "eval"]
+Split = Literal["tune", "eval", "dev"]
 
 # Per-case projection used only by the env-gated cap.
 _ARM_A_COST_PER_CASE = 0.50  # Sonnet 4.6 sequential, 5 agents, many turns
@@ -236,9 +236,16 @@ def _start_manifest(out_dir: Path, panel_config: PanelConfig, arm: Arm, n: int) 
 
 
 def load_v2_cases(split: Split | None = None, case_id: str | None = None) -> list[EvalCase]:
-    """Return EvalCases filtered by split or single case_id."""
+    """Return EvalCases filtered by split or single case_id.
+
+    split="dev" loads the held-out 26-case DEV tuning set from its own files
+    (never splits.json). DEV ids are disjoint from TUNE/EVAL by construction.
+    """
     if case_id:
-        return [c for c in load_corpus() if c.case_id == case_id]
+        pool = load_corpus() + load_dev_corpus()
+        return [c for c in pool if c.case_id == case_id]
+    if split == "dev":
+        return load_dev_corpus()
     return load_corpus(split=split)
 
 

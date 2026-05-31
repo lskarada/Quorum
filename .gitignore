@@ -47,7 +47,13 @@ data/cases/mcr/*.json
 # MCR (MIT) and RareBench (Apache 2.0) JSON bodies ARE committed.
 # Splits.json is committed (just case-IDs, no copyrighted content).
 data/cases/eval_corpus_v2/nejm_sample.json
+# DEV set: also NEJM-paywalled — do NOT commit. Held in a SEPARATE file from
+# nejm_sample.json so a splits.json re-split can never pull DEV into EVAL/TUNE.
+data/cases/eval_corpus_v2/dev_nejm_sample.json
+data/cases/eval_corpus_v2/_dev_nejm_raw/
 !data/cases/eval_corpus_v2/mcr_sample.json
+# DEV augmentation: MCR (MIT) is public + committable, unlike the paywalled NEJM DEV file.
+!data/cases/eval_corpus_v2/dev_mcr_sample.json
 !data/cases/eval_corpus_v2/rarebench_sample.json
 !data/cases/eval_corpus_v2/splits.json
 !data/cases/eval_corpus_v2/README.md

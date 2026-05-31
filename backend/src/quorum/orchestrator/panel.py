@@ -79,26 +79,46 @@ class Panel:
         self.config = config
 
         # Required slot.
-        self.hypothesis = HypothesisAgent(llm, model=config.hypothesis.model)
+        self.hypothesis = HypothesisAgent(
+            llm,
+            model=config.hypothesis.model,
+            temperature=config.hypothesis.temperature,
+        )
 
         # Optional slots — None when the YAML omits them (e.g. baseline_single_call).
         self.test_chooser = (
-            TestChooserAgent(llm, model=config.test_chooser.model)
+            TestChooserAgent(
+                llm,
+                model=config.test_chooser.model,
+                temperature=config.test_chooser.temperature,
+            )
             if config.test_chooser is not None
             else None
         )
         self.challenger = (
-            ChallengerAgent(llm, model=config.challenger.model)
+            ChallengerAgent(
+                llm,
+                model=config.challenger.model,
+                temperature=config.challenger.temperature,
+            )
             if config.challenger is not None
             else None
         )
         self.stewardship = (
-            StewardshipAgent(llm, model=config.stewardship.model)
+            StewardshipAgent(
+                llm,
+                model=config.stewardship.model,
+                temperature=config.stewardship.temperature,
+            )
             if config.stewardship is not None
             else None
         )
         self.checklist = (
-            ChecklistAgent(llm, model=config.checklist.model)
+            ChecklistAgent(
+                llm,
+                model=config.checklist.model,
+                temperature=config.checklist.temperature,
+            )
             if config.checklist is not None
             else None
         )

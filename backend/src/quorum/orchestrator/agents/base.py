@@ -21,9 +21,15 @@ class Agent(ABC):
 
     role: AgentRole
 
-    def __init__(self, llm: LLMClient, model: str | None = None):
+    def __init__(
+        self,
+        llm: LLMClient,
+        model: str | None = None,
+        temperature: float | None = None,
+    ):
         self.llm = llm
         self.model = model  # None → llm.default_model is used by self.llm.complete
+        self.temperature = temperature  # None → API default; configs set 0.0
         self._prompt_template: str | None = None
 
     @property

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Spend gate: blocks quorum-eval invocations if accumulated spend exceeds the
-# hard-stop threshold (default $75, configurable via QUORUM_SPEND_HARD_STOP_USD).
+# hard-stop threshold (default $142, configurable via QUORUM_SPEND_HARD_STOP_USD).
+# Raised $75 -> $142 by explicit user approval (2026-05-30 Accuracy-Maximization Campaign).
 # Other Bash calls pass through. Designed to be called from .claude/settings.json
 # as a PreToolUse hook on the Bash tool.
 set -euo pipefail
 
 INPUT="${1:-}"
-HARD_STOP="${QUORUM_SPEND_HARD_STOP_USD:-75}"
-WARN="${QUORUM_SPEND_WARN_USD:-70}"
+HARD_STOP="${QUORUM_SPEND_HARD_STOP_USD:-142}"
+WARN="${QUORUM_SPEND_WARN_USD:-135}"
 TRACKER="data/results/.spend_total.txt"
 
 # Only gate quorum-eval and the v2 benchmark runner. Everything else is fine.
