@@ -1,0 +1,5 @@
+{
+  "dev": ["nejm-cpc-1-2025","nejm-cpc-2-2025","nejm-cpc-3-2025","nejm-cpc-4-2025","nejm-cpc-5-2025","nejm-cpc-6-2025","nejm-cpc-7-2025","nejm-cpc-8-2025","nejm-cpc-9-2025","nejm-cpc-10-2025","nejm-cpc-11-2025","nejm-cpc-12-2025","nejm-cpc-13-2025","nejm-cpc-14-2025","nejm-cpc-15-2025","nejm-cpc-16-2025","nejm-cpc-17-2025","nejm-cpc-18-2025","nejm-cpc-19-2025","nejm-cpc-20-2025","nejm-cpc-21-2025","nejm-cpc-22-2025","nejm-cpc-23-2025","nejm-cpc-24-2025","nejm-cpc-25-2025","nejm-cpc-26-2025","nejm-cpc-27-2025","nejm-cpc-28-2025","nejm-cpc-30-2025","nejm-cpc-32-2025","nejm-cpc-34-2025","nejm-cpc-35-2025","nejm-cpc-36-2025"],
+  "holdout": ["nejm-cpc-2-2026","nejm-cpc-3-2026","nejm-cpc-4-2026","nejm-cpc-5-2026","nejm-cpc-6-2026","nejm-cpc-7-2026","nejm-cpc-8-2026","nejm-cpc-9-2026","nejm-cpc-10-2026","nejm-cpc-11-2026","nejm-cpc-13-2026","nejm-cpc-14-2026"],
+  "_note": "v3 NEJM-only. DEV = NEJM-2025 (dev_nejm_sample 1-25 + nejm_sample 26-36). HOLDOUT = NEJM-2026, run ONCE."
+}

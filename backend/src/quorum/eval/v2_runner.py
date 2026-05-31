@@ -235,15 +235,30 @@ def _start_manifest(out_dir: Path, panel_config: PanelConfig, arm: Arm, n: int) 
     return manifest
 
 
-def load_v2_cases(split: Split | None = None, case_id: str | None = None) -> list[EvalCase]:
+def load_v2_cases(
+    split: Split | None = None,
+    case_id: str | None = None,
+    split_file: str | None = None,
+    split_key: str | None = None,
+) -> list[EvalCase]:
     """Return EvalCases filtered by split or single case_id.
 
     split="dev" loads the held-out 26-case DEV tuning set from its own files
     (never splits.json). DEV ids are disjoint from TUNE/EVAL by construction.
+
+    split_file + split_key: load from a named split JSON under CORPUS_DIR,
+    e.g. split_file="splits_v3_nejm.json", split_key="holdout".
+    The pool searched is load_corpus() + load_dev_corpus().
     """
     if case_id:
         pool = load_corpus() + load_dev_corpus()
         return [c for c in pool if c.case_id == case_id]
+    if split_file is not None:
+        import json
+        from quorum.eval.eval_case import CORPUS_DIR
+        ids = set(json.loads((CORPUS_DIR / split_file).read_text())[split_key])
+        pool = load_corpus() + load_dev_corpus()
+        return [c for c in pool if c.case_id in ids]
     if split == "dev":
         return load_dev_corpus()
     return load_corpus(split=split)
@@ -301,19 +316,43 @@ if __name__ == "__main__":  # pragma: no cover
     ap.add_argument("--max-turns", type=int, default=30)
     ap.add_argument("--commit-threshold", type=float, default=0.70)
     ap.add_argument("--confirm-cost", action="store_true")
+    ap.add_argument("--split-file", default=None)
+    ap.add_argument("--split-key", default=None)
     args = ap.parse_args()
 
-    out = asyncio.run(
-        run(
-            args.arm,
-            panel_name=args.panel,
-            split=args.split,
-            case_id=args.case_id,
-            n=args.n,
-            run_id=args.run_id,
-            max_turns=args.max_turns,
-            commit_threshold=args.commit_threshold,
-            confirm_cost=args.confirm_cost,
+    if args.split_file is not None:
+        cases = load_v2_cases(split_file=args.split_file, split_key=args.split_key)
+        if args.n is not None:
+            cases = cases[: args.n]
+        if not cases:
+            raise ValueError(f"No cases matched --split-file={args.split_file!r} --split-key={args.split_key!r}")
+        panel_config = next(
+            c for c in __import__("quorum.orchestrator.panel_config", fromlist=["PanelConfig"]).PanelConfig.list_available()
+            if c.name == args.panel
         )
-    )
+        out = asyncio.run(
+            (run_arm_a if args.arm == "arm_a" else run_arm_b)(
+                cases, panel_config, None,
+                run_id=args.run_id,
+                **({
+                    "max_turns": args.max_turns,
+                    "commit_threshold": args.commit_threshold,
+                    "confirm_cost": args.confirm_cost,
+                } if args.arm == "arm_a" else {"confirm_cost": args.confirm_cost}),
+            )
+        )
+    else:
+        out = asyncio.run(
+            run(
+                args.arm,
+                panel_name=args.panel,
+                split=args.split,
+                case_id=args.case_id,
+                n=args.n,
+                run_id=args.run_id,
+                max_turns=args.max_turns,
+                commit_threshold=args.commit_threshold,
+                confirm_cost=args.confirm_cost,
+            )
+        )
     print(f"Wrote results to {out}")
