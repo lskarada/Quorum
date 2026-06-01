@@ -86,3 +86,6 @@ data/prompt_iteration/
 .pytest-cache/
 .next/
 out/
+
+# Superpowers brainstorm artifacts (local only)
+.superpowers/

@@ -174,22 +174,20 @@ describe("Diagnose page", () => {
     });
   });
 
-  it("disables the Begin button while running", async () => {
-    // Stream that pauses by never closing — we can't easily do that in a
-    // single chunk, so use HAPPY_SSE and assert disabled-then-enabled.
+  it("collapses the case input to a read-only chart once a run completes", async () => {
+    // In the redesigned layout the left card swaps from the CaseInput to a
+    // read-only CaseChart when a run starts; on completion a "New case"
+    // affordance appears. This replaces the old "Begin re-enables" assertion.
     mockFetchSSE(HAPPY_SSE);
     renderDiagnose();
     const textarea = screen.getByPlaceholderText(/clinical vignette/i);
     fireEvent.change(textarea, { target: { value: "test" } });
-    const button = screen.getByRole("button", { name: /Begin/i });
-    fireEvent.click(button);
+    fireEvent.click(screen.getByRole("button", { name: /Begin/i }));
 
-    // After click, button text flips to "Deliberating..." (CaseInput renders this
-    // when disabled). Wait until the stream completes and it flips back.
+    // Run settles: a "New case" button appears and the "Begin" control is gone.
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /Begin/i }),
-      ).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: /New case/i })).toBeInTheDocument();
     });
+    expect(screen.queryByRole("button", { name: /Begin/i })).not.toBeInTheDocument();
   });
 });

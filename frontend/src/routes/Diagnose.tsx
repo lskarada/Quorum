@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { AgentCard } from "@/components/agent-card";
 import { CaseInput } from "@/components/case-input";
+import { CaseChart } from "@/components/case-chart";
 import { DifferentialTable } from "@/components/differential-table";
+import { VerdictHeader } from "@/components/verdict-header";
 import { CitationPanel } from "@/components/citation-panel";
 import { NextTestCard } from "@/components/next-test-card";
-import { ConfidenceMeter } from "@/components/confidence-meter";
 import { IterationDivider } from "@/components/iteration-divider";
+import { TypingIndicator } from "@/components/typing-indicator";
+import { TopBar } from "@/components/top-bar";
 import { streamDiagnosis } from "@/lib/sse";
 import type {
   AgentCompleteData,
@@ -13,6 +18,7 @@ import type {
   AgentCompleteTestChooserData,
   AgentCompleteGenericData,
   AgentMessage,
+  Differential,
   ErrorPayload,
   FinalVerdict,
   NextTest,
@@ -88,15 +94,49 @@ interface IterationData {
   complete: boolean;
 }
 
+const CARD = "rounded-2xl border border-line bg-card p-[18px] shadow-card-2";
+
+// Human-readable labels for the panels the backend exposes. Used only for the
+// top-bar chip — the panel id itself is what's sent on the wire. Falls back to
+// the raw id for anything not enumerated here so the label never lies.
+const PANEL_LABELS: Record<string, string> = {
+  v2_quorum_calibrated: "v2 · 5-agent calibrated",
+  v2_quorum_opus: "v2 · 5-agent (Opus)",
+  dev_cheap: "dev · 5-agent (cheap)",
+  mixed_vendor: "5-agent · mixed vendor",
+  uniform_cheap: "5-agent · uniform cheap",
+  uniform_mid: "5-agent · uniform mid",
+  baseline_single_call: "baseline · single call",
+  single_haiku: "baseline · single (Haiku)",
+  single_sonnet: "baseline · single (Sonnet)",
+};
+
+// Default to the calibrated 5-agent panel: the whole demo is the multi-agent
+// debate, and the backend's no-panel default is a single hypothesis call.
+// `VITE_DIAGNOSE_PANEL` overrides the default; `?panel=` overrides everything.
+const DEFAULT_PANEL =
+  (import.meta.env.VITE_DIAGNOSE_PANEL as string | undefined) ?? "v2_quorum_calibrated";
+
+function panelLabelFor(panel: string): string {
+  return PANEL_LABELS[panel] ?? panel;
+}
+
 export default function Diagnose() {
   const [iterations, setIterations] = useState<IterationData[]>([]);
   const [verdict, setVerdict] = useState<FinalVerdict | null>(null);
   const [nextTest, setNextTest] = useState<NextTest | null>(null);
+  const [liveDifferential, setLiveDifferential] = useState<Differential | null>(null);
+  const [testsOrdered, setTestsOrdered] = useState<NextTest[]>([]);
+  const [submittedPresentation, setSubmittedPresentation] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<ErrorPayload | null>(null);
   const [retriesUsed, setRetriesUsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const lastPresentationRef = useRef<string>("");
+  const feedEndRef = useRef<HTMLDivElement | null>(null);
+  const reduce = useReducedMotion();
+  const [searchParams] = useSearchParams();
+  const panel = searchParams.get("panel") ?? DEFAULT_PANEL;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -116,6 +156,9 @@ export default function Diagnose() {
     setIterations([{ iteration: 0, messages: [], complete: false }]);
     setVerdict(null);
     setNextTest(null);
+    setLiveDifferential(null);
+    setTestsOrdered([]);
+    setSubmittedPresentation(presentation);
     setError(null);
     if (!isRetry) setRetriesUsed(0);
     lastPresentationRef.current = presentation;
@@ -124,7 +167,7 @@ export default function Diagnose() {
     abortRef.current = controller;
 
     try {
-      for await (const evt of streamDiagnosis(presentation, controller.signal)) {
+      for await (const evt of streamDiagnosis(presentation, controller.signal, panel)) {
         if (evt.event === "agent_complete") {
           setIterations((prev) => {
             const next = [...prev];
@@ -137,8 +180,15 @@ export default function Diagnose() {
             };
             return next;
           });
+          if (evt.data.agent === "hypothesis") {
+            setLiveDifferential(evt.data.differential);
+          }
           if (evt.data.agent === "test_chooser") {
-            setNextTest(evt.data.next_test);
+            const t = evt.data.next_test;
+            setNextTest(t);
+            setTestsOrdered((prev) =>
+              prev.some((p) => p.name === t.name) ? prev : [...prev, t],
+            );
           }
         } else if (evt.event === "round_complete") {
           setIterations((prev) => {
@@ -176,78 +226,147 @@ export default function Diagnose() {
     }
   };
 
+  const handleNewCase = () => {
+    setIterations([]);
+    setVerdict(null);
+    setNextTest(null);
+    setLiveDifferential(null);
+    setTestsOrdered([]);
+    setSubmittedPresentation("");
+    setError(null);
+  };
+
   // Drop trailing empty iterations (e.g. after final round_complete + verdict).
   const visibleIterations = iterations.filter(
     (it, idx) => it.messages.length > 0 || idx === 0,
   );
-
   const hasAnyMessages = visibleIterations.some((it) => it.messages.length > 0);
+  const lastIterCount =
+    visibleIterations[visibleIterations.length - 1]?.messages.length ?? 0;
+  const currentRound = (iterations[iterations.length - 1]?.iteration ?? 0) + 1;
+  const statusText = running
+    ? `Deliberating · round ${currentRound}`
+    : verdict
+      ? "Complete"
+      : "Idle";
+  const showChart = running || hasAnyMessages || verdict !== null;
+
+  // Auto-scroll the feed to the newest message while the panel is running.
+  useEffect(() => {
+    if (running) feedEndRef.current?.scrollIntoView({ block: "end" });
+  }, [iterations, running]);
 
   return (
-    <main className="min-h-screen grid grid-cols-1 lg:grid-cols-[320px_1fr_360px] gap-4 p-4">
-      <aside className="space-y-4">
-        <CaseInput onStart={handleStart} disabled={running} />
-        {error && (
-          <div
-            role="alert"
-            className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm space-y-2"
-          >
-            <p className="font-semibold">Error: {error.code}</p>
-            <p className="break-words">{error.message || "(no message)"}</p>
-            {error.retriable && (
-              <button
-                type="button"
-                disabled={running || retriesUsed >= 1}
-                onClick={() => {
-                  setRetriesUsed((n) => n + 1);
-                  void handleStart(lastPresentationRef.current, true);
-                }}
-                className="inline-flex items-center rounded-md border border-destructive bg-background px-3 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-              >
-                {retriesUsed >= 1 ? "Retry used" : "Retry"}
-              </button>
+    <main className="mx-auto max-w-[1280px] space-y-[18px] p-4">
+      <TopBar panelLabel={panelLabelFor(panel)} status={statusText} running={running} />
+
+      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[380px_1fr]">
+        {/* Left — case chart / input */}
+        <aside className="space-y-[18px]">
+          <div className={CARD}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight">Case chart</h2>
+              {showChart && !running && (
+                <button
+                  type="button"
+                  onClick={handleNewCase}
+                  className="rounded-md border border-line px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-surface-2"
+                >
+                  New case
+                </button>
+              )}
+            </div>
+            {showChart ? (
+              <CaseChart presentation={submittedPresentation} testsOrdered={testsOrdered} />
+            ) : (
+              <CaseInput onStart={handleStart} disabled={running} />
             )}
           </div>
-        )}
-      </aside>
-      <section
-        aria-live="polite"
-        aria-busy={running}
-        aria-label="Deliberation transcript"
-      >
-        {!hasAnyMessages && !running ? (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            Paste a case and hit Begin to start the deliberation.
+          {error && (
+            <div
+              role="alert"
+              className="space-y-2 rounded-2xl border border-destructive bg-destructive/10 p-4 text-sm"
+            >
+              <p className="font-semibold">Error: {error.code}</p>
+              <p className="break-words">{error.message || "(no message)"}</p>
+              {error.retriable && (
+                <button
+                  type="button"
+                  disabled={running || retriesUsed >= 1}
+                  onClick={() => {
+                    setRetriesUsed((n) => n + 1);
+                    void handleStart(lastPresentationRef.current, true);
+                  }}
+                  className="inline-flex items-center rounded-md border border-destructive bg-background px-3 py-1 text-xs font-medium hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+                >
+                  {retriesUsed >= 1 ? "Retry used" : "Retry"}
+                </button>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* Right — verdict + deliberation */}
+        <div className="space-y-[18px]">
+          <div className={`${CARD} space-y-4`}>
+            <VerdictHeader verdict={verdict} liveDifferential={liveDifferential} />
+            <div>
+              <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-faint">
+                Ranked differential
+              </div>
+              <DifferentialTable verdict={verdict} liveDifferential={liveDifferential} />
+            </div>
+            <NextTestCard verdict={verdict} nextTest={nextTest} />
+            <CitationPanel verdict={verdict} />
           </div>
-        ) : (
-          <div className="space-y-3">
-            {visibleIterations.map((it) => (
-              <div key={it.iteration}>
-                <IterationDivider iteration={it.iteration} />
-                <div className="space-y-3">
-                  {it.messages.map((msg, idx) => (
-                    <AgentCard
-                      key={`${msg.role}-${it.iteration}-${idx}`}
-                      message={msg}
-                    />
-                  ))}
+
+          <div className={CARD}>
+            <header className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight">Deliberation</h2>
+              <span className="text-[11.5px] text-muted-foreground">5 agents · streaming</span>
+            </header>
+            <section
+              aria-live="polite"
+              aria-busy={running}
+              aria-label="Deliberation transcript"
+              data-verify-agent-count={lastIterCount}
+            >
+              {!hasAnyMessages && !running ? (
+                <div className="flex h-40 items-center justify-center text-center text-sm text-muted-foreground">
+                  Paste a case and hit Begin to start the deliberation.
                 </div>
-              </div>
-            ))}
-            {running && (
-              <div className="text-sm text-muted-foreground italic">
-                Panel is thinking...
-              </div>
-            )}
+              ) : (
+                <div className="space-y-3">
+                  {visibleIterations.map((it) => (
+                    <div key={it.iteration}>
+                      <IterationDivider iteration={it.iteration} />
+                      <div className="space-y-3">
+                        {it.messages.map((msg, idx) => (
+                          <motion.div
+                            key={`${msg.role}-${it.iteration}-${idx}`}
+                            initial={reduce ? false : { opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                          >
+                            <AgentCard message={msg} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {running && (
+                    <div className="flex items-center gap-2 pl-[42px] text-xs text-muted-foreground">
+                      <TypingIndicator />
+                      <span>Panel is deliberating…</span>
+                    </div>
+                  )}
+                  <div ref={feedEndRef} />
+                </div>
+              )}
+            </section>
           </div>
-        )}
-      </section>
-      <aside className="space-y-4">
-        <DifferentialTable verdict={verdict} />
-        <NextTestCard verdict={verdict} nextTest={nextTest} />
-        <ConfidenceMeter verdict={verdict} />
-        <CitationPanel verdict={verdict} />
-      </aside>
+        </div>
+      </div>
     </main>
   );
 }
