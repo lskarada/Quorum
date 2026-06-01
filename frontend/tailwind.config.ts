@@ -14,6 +14,10 @@ const config: Config = {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -50,12 +54,33 @@ const config: Config = {
         "agent-challenger": "hsl(0, 84%, 60%)",
         "agent-stewardship": "hsl(43, 96%, 56%)",
         "agent-checklist": "hsl(280, 91%, 60%)",
+        // clinical-trust helper tokens
+        "surface-2": "var(--surface-2)",
+        "ink-2": "var(--ink-2)",
+        faint: "var(--faint)",
+        "line-strong": "var(--line-strong)",
+        ok: "var(--ok)",
+        warn: "var(--warn)",
+        line: "hsl(var(--border))",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        "card-1": "0 1px 2px rgba(15,23,42,.05)",
+        "card-2": "0 1px 2px rgba(15,23,42,.04), 0 10px 30px rgba(15,23,42,.07)",
+      },
+      keyframes: {
+        blink: { "0%,60%,100%": { opacity: "0.25" }, "30%": { opacity: "1" } },
+        livepulse: {
+          "0%": { boxShadow: "0 0 0 0 rgba(22,163,74,.45)" },
+          "70%": { boxShadow: "0 0 0 7px rgba(22,163,74,0)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(22,163,74,0)" },
+        },
+      },
+      animation: { blink: "blink 1.2s infinite", livepulse: "livepulse 1.6s infinite" },
     },
   },
   plugins: [animate],
