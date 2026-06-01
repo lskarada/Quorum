@@ -614,22 +614,22 @@ describe("data-verify invariants", () => {
 });
 ```
 
-- [ ] **Step 2: Run** `pnpm vitest run src/components/__tests__/invariants.test.tsx` — expect 3 pass.
-- [ ] **Step 3: Commit.** `git add frontend/src/components/__tests__/invariants.test.tsx && git commit -m "test(ui): data-verify invariants for leading dx + posterior sum"`
+- [x] **Step 2: Run** `pnpm vitest run src/components/__tests__/invariants.test.tsx` — expect 3 pass.
+- [x] **Step 3: Commit.** `git add frontend/src/components/__tests__/invariants.test.tsx && git commit -m "test(ui): data-verify invariants for leading dx + posterior sum"`
 
 ---
 
 ## Task 10: Full-suite gate + live stress test across all routes
 
-- [ ] **Step 1: Full frontend gate.** `cd frontend && pnpm install && pnpm lint && pnpm tsc --noEmit && pnpm vitest run` — everything green.
-- [ ] **Step 2: Backend sanity (no behavior changed, but confirm nothing broke).** `cd backend && uv run pytest -q` — green (or unchanged from pre-redesign baseline).
-- [ ] **Step 3: Production build smoke.** `cd frontend && pnpm build` — succeeds (tsc -b + vite build), no type errors.
-- [ ] **Step 4: Live stress test (required, Chrome extension preferred; Preview MCP fallback).** With both servers up:
-  - `/` → `/diagnose` → run a real case end-to-end; abort mid-run with Esc and confirm clean stop; run again; trigger an error and confirm the alert+retry.
-  - `/compare` → run two panels; confirm summary + no console errors.
-  - Resize the window narrow → confirm the 2-col layouts stack without overflow.
-  - For each route: read console (zero errors/warnings) and screenshot; visually compare `/diagnose` to the locked mockup.
-- [ ] **Step 5: Final commit (if any cleanup).** Commit remaining changes; then proceed to `superpowers:finishing-a-development-branch`.
+- [x] **Step 1: Full frontend gate.** `cd frontend && pnpm install && pnpm lint && pnpm tsc --noEmit && pnpm vitest run` — everything green. (lint 0 errors / 2 pre-existing warnings; tsc clean; vitest 25 passed across 7 files)
+- [x] **Step 2: Backend sanity (no behavior changed, but confirm nothing broke).** `cd backend && uv run pytest -q` — green. (262 passed)
+- [x] **Step 3: Production build smoke.** `cd frontend && pnpm build` — succeeds (tsc -b + vite build), no type errors. (dist 420.43 KB JS / 20.43 KB CSS)
+- [x] **Step 4: Live stress test (required, Chrome extension preferred; Preview MCP fallback).** With both servers up:
+  - `/` → `/diagnose` → ran a real `v2_quorum_calibrated` case end-to-end (5 agents in order, 82% ring, "Consensus reached", collapse-to-chart + "New case"); aborted mid-run with Esc → clean stop (status "Idle", aria-busy false, partial retained, no banner); error path `?panel=__nonexistent_panel__` → 422 → role="alert" banner, console clean.
+  - `/compare` → ran two panels; both columns streamed (CRLF framing fix verified), no `parse_failure`, summary rendered, console clean.
+  - Resized narrow (375px) → both `/diagnose` and `/compare` stack to a single 343px column, zero horizontal overflow; `/compare` splits to two equal columns at 768px.
+  - For each route: console clean (the `net::ERR_ABORTED` entries are the expected signature of clean AbortController.abort(), not errors); screenshots captured; `/diagnose` visually matches the locked mockup.
+- [x] **Step 5: Final commit (if any cleanup).** No remaining redesign changes to commit (Tasks 1–9 fully committed; only untracked `data/results/.holdout_*` campaign artifacts remain and are intentionally excluded). Proceeding to `superpowers:finishing-a-development-branch`.
 
 ---
 
