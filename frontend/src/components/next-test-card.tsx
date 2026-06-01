@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/card";
 import type { FinalVerdict, NextTest } from "@/lib/types";
 
 interface NextTestCardProps {
@@ -7,31 +6,25 @@ interface NextTestCardProps {
 }
 
 /**
- * Right-rail recommended next test.
- *
- * Sources, in priority order:
- *   1. The `nextTest` prop, set by Diagnose.tsx from the test_chooser
- *      `agent_complete` SSE event (Phase 3).
- *   2. `verdict.recommended_next_test`, populated by Panel when present.
- *
- * TODO (visual pass):
- *   - Highlight cost when budget_usd was set on the case input
- *   - Show "discriminates between" as inline candidate chips
+ * Recommended next test, sourced from the `nextTest` prop (test_chooser
+ * SSE event) or `verdict.recommended_next_test`. Green Test-Chooser accent.
  */
 export function NextTestCard({ verdict, nextTest }: NextTestCardProps) {
   const next = nextTest ?? verdict?.recommended_next_test;
   if (!next) return null;
 
   return (
-    <Card className="p-4 space-y-2">
-      <h3 className="font-semibold">Recommended next test</h3>
-      <p className="text-sm font-medium">{next.name}</p>
-      <p className="text-sm text-muted-foreground">{next.rationale}</p>
+    <div className="rounded-lg border border-l-[3px] border-line border-l-agent-test-chooser bg-surface-2 p-3.5">
+      <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-agent-test-chooser">
+        Recommended next test
+      </div>
+      <p className="text-[13.5px] font-semibold">{next.name}</p>
+      <p className="mt-0.5 text-[12.5px] text-muted-foreground">{next.rationale}</p>
       {next.estimated_cost_usd != null && (
-        <p className="text-xs text-muted-foreground">
-          Est. cost: ${next.estimated_cost_usd.toFixed(2)}
+        <p className="mt-1.5 font-mono text-[11.5px] text-muted-foreground">
+          Est. cost ${next.estimated_cost_usd.toFixed(2)}
         </p>
       )}
-    </Card>
+    </div>
   );
 }
