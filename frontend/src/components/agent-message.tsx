@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import type { AgentMessage as AgentMessageT } from "@/lib/types";
 
 interface AgentMessageProps {
@@ -13,13 +12,17 @@ interface AgentMessageProps {
 export function AgentMessage({ message }: AgentMessageProps) {
   return (
     <div className="space-y-2">
-      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink-2">{message.content}</p>
       {message.citations && message.citations.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {message.citations.map((c, idx) => (
-            <Badge key={idx} variant="outline" title={c.title ?? c.source}>
+            <span
+              key={idx}
+              title={c.title ?? c.source}
+              className="inline-flex items-center rounded-full border border-line-strong bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground"
+            >
               {c.source}
-            </Badge>
+            </span>
           ))}
         </div>
       )}
