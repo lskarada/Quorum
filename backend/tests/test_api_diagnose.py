@@ -185,7 +185,7 @@ async def test_post_diagnose_hypothesis_error_returns_200_with_error_verdict(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/diagnose/stream
+# POST /api/diagnose/stream
 # ---------------------------------------------------------------------------
 
 
@@ -194,9 +194,9 @@ async def test_stream_diagnose_emits_events_in_order(client_with_mock_panel):
     round_complete, verdict."""
     client, _ = await client_with_mock_panel()
     async with client:
-        response = await client.get(
+        response = await client.post(
             "/api/diagnose/stream",
-            params={"presentation": "Patient with cough."},
+            json={"presentation": "Patient with cough."},
         )
     assert response.status_code == 200
     events = _parse_sse_events(response.text)
@@ -211,9 +211,9 @@ async def test_stream_diagnose_emits_events_in_order(client_with_mock_panel):
 async def test_stream_diagnose_agent_complete_payload(client_with_mock_panel):
     client, _ = await client_with_mock_panel()
     async with client:
-        response = await client.get(
+        response = await client.post(
             "/api/diagnose/stream",
-            params={"presentation": "Patient with cough."},
+            json={"presentation": "Patient with cough."},
         )
     events = _parse_sse_events(response.text)
     complete = next(e for e in events if e["event"] == "agent_complete")
@@ -225,7 +225,7 @@ async def test_stream_diagnose_agent_complete_payload(client_with_mock_panel):
 async def test_stream_diagnose_missing_presentation_returns_422(client_with_mock_panel):
     client, _ = await client_with_mock_panel()
     async with client:
-        response = await client.get("/api/diagnose/stream")
+        response = await client.post("/api/diagnose/stream", json={})
     assert response.status_code == 422
 
 
@@ -236,9 +236,9 @@ async def test_stream_diagnose_emits_error_event_on_hypothesis_failure(
         side_effect=RuntimeError("provider 429 rate limit")
     )
     async with client:
-        response = await client.get(
+        response = await client.post(
             "/api/diagnose/stream",
-            params={"presentation": "Will fail."},
+            json={"presentation": "Will fail."},
         )
     assert response.status_code == 200
     events = _parse_sse_events(response.text)
@@ -284,11 +284,11 @@ async def test_list_panels_returns_configs():
 
 
 async def test_get_panel_dependency_selects_named_config(monkeypatch):
-    """Hitting /api/diagnose/stream?panel=baseline_single_call builds a Panel
+    """POST /api/diagnose/stream with `panel` in the body builds a Panel
     constructed from that named PanelConfig.
 
-    Verified by intercepting the Panel constructor — the second positional
-    argument must be the baseline PanelConfig.
+    Verified by intercepting the Panel constructor — the last-constructed
+    Panel (the body override) must use the baseline PanelConfig.
     """
     from quorum.api import routes
 
@@ -312,9 +312,9 @@ async def test_get_panel_dependency_selects_named_config(monkeypatch):
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get(
+        response = await client.post(
             "/api/diagnose/stream",
-            params={"presentation": "x", "panel": "baseline_single_call"},
+            json={"presentation": "x", "panel": "baseline_single_call"},
         )
     assert response.status_code == 200
     assert captured["config"].name == "baseline_single_call"
@@ -361,9 +361,9 @@ async def test_diagnose_stream_unknown_panel_returns_422(client_with_mock_panel)
     app.dependency_overrides.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get(
+        response = await client.post(
             "/api/diagnose/stream",
-            params={"presentation": "x", "panel": "no_such_panel"},
+            json={"presentation": "x", "panel": "no_such_panel"},
         )
     assert response.status_code == 422
 

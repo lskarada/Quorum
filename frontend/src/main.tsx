@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="quorum-theme">
+    <ThemeProvider defaultTheme="light" storageKey="quorum-theme">
       <BrowserRouter>
         <App />
       </BrowserRouter>

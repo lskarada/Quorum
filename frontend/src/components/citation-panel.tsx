@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/card";
 import type { Citation, FinalVerdict } from "@/lib/types";
 
 interface CitationPanelProps {
@@ -19,11 +18,8 @@ function dedupe(citations: Citation[]): Citation[] {
 }
 
 /**
- * Right-rail citation panel — deduplicated across all transcript messages.
- *
- * TODO (visual pass):
- *   - Scroll into view when a citation chip in DebateView is clicked
- *   - Group by source (e.g. NEJM, UpToDate, PubMed)
+ * Citation panel — deduplicated across all transcript messages and the final
+ * differential candidates. Renders nothing when there are no citations.
  */
 export function CitationPanel({ verdict }: CitationPanelProps) {
   if (!verdict) return null;
@@ -35,22 +31,27 @@ export function CitationPanel({ verdict }: CitationPanelProps) {
   if (unique.length === 0) return null;
 
   return (
-    <Card className="p-4 space-y-2">
-      <h3 className="font-semibold">Citations</h3>
-      <ul className="space-y-1 text-sm">
+    <div>
+      <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-faint">Citations</div>
+      <ul className="space-y-1.5 text-[12.5px]">
         {unique.map((c, idx) => (
-          <li key={idx}>
+          <li key={idx} className="leading-snug">
             {c.url ? (
-              <a href={c.url} target="_blank" rel="noreferrer" className="underline">
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono font-medium text-primary underline-offset-2 hover:underline"
+              >
                 {c.source}
               </a>
             ) : (
-              <span>{c.source}</span>
+              <span className="font-mono font-medium text-ink-2">{c.source}</span>
             )}
             {c.title && <span className="text-muted-foreground"> — {c.title}</span>}
           </li>
         ))}
       </ul>
-    </Card>
+    </div>
   );
 }

@@ -80,17 +80,23 @@ async def diagnose(
     return DiagnoseResponse(verdict=verdict)
 
 
-@router.get("/diagnose/stream")
+@router.post("/diagnose/stream")
 async def diagnose_stream(
-    presentation: Annotated[str, Query(max_length=_PRESENTATION_MAX_LENGTH)],
-    case_id: Annotated[str | None, Query(max_length=256)] = None,
+    request: DiagnoseRequest,
     panel: Panel = Depends(get_panel),
 ) -> EventSourceResponse:
     """SSE-streamed diagnosis. Frontend consumes this for live debate display.
 
-    Optional `?panel=<name>` query param selects a named PanelConfig.
+    The case presentation is sent in the POST body (not the URL) so long
+    cases don't overflow the server's request-line/header limit (HTTP 431).
+
+    If `request.panel` is set, it selects the PanelConfig used to build the
+    Panel (overriding any `?panel=` query parameter), matching POST /diagnose.
     """
-    case = CaseInput(presentation=presentation, case_id=case_id)
+    if request.panel is not None:
+        cfg = _resolve_config(request.panel)
+        panel = Panel(LLMClient(), cfg)
+    case = CaseInput(presentation=request.presentation, case_id=request.case_id)
 
     async def event_generator():
         async for event in panel.diagnose_stream(case):

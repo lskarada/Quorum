@@ -11,7 +11,11 @@ describe("App", () => {
         <App />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/Quorum/i)).toBeInTheDocument();
+    // The TopBar also renders a "Quorum" brand mark, so target the hero
+    // heading specifically rather than any text match.
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Quorum/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders the diagnose page at /diagnose", () => {
