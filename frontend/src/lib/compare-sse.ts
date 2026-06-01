@@ -51,7 +51,14 @@ export async function* streamCompare(
         if (last) yield last;
         return;
       }
-      buffer += decoder.decode(value, { stream: true });
+      // Normalize line endings before framing. sse-starlette (the backend)
+      // separates events with CRLF (`\r\n\r\n`), but the SSE spec also permits
+      // bare LF or CR. Splitting on a literal "\n\n" would never match a
+      // `\r\n\r\n` boundary, so every event would pile into one unparseable
+      // frame. Collapsing `\r\n` and lone `\r` to `\n` on the accumulated
+      // buffer makes the split work for all three conventions, and operating
+      // on the full buffer each pass handles delimiters split across chunks.
+      buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n?/g, "\n");
 
       const frames = buffer.split("\n\n");
       buffer = frames.pop() ?? "";

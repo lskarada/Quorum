@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AgentCard } from "@/components/agent-card";
 import { CaseInput } from "@/components/case-input";
 import { ComparisonSummary } from "@/components/comparison-summary";
+import { DifferentialTable } from "@/components/differential-table";
 import { IterationDivider } from "@/components/iteration-divider";
-import { Card } from "@/components/ui/card";
+import { TopBar } from "@/components/top-bar";
 import { streamCompare } from "@/lib/compare-sse";
 import type {
   AgentCompleteData,
@@ -11,9 +12,12 @@ import type {
   AgentCompleteTestChooserData,
   AgentCompleteGenericData,
   AgentMessage,
+  Differential,
   ErrorPayload,
   FinalVerdict,
 } from "@/lib/types";
+
+const CARD = "rounded-2xl border border-line bg-card p-[18px] shadow-card-2";
 
 function hypothesisMessage(
   data: AgentCompleteHypothesisData,
@@ -205,51 +209,79 @@ export default function Compare() {
   const bothVerdictsIn =
     !!states[panelA]?.verdict && !!states[panelB]?.verdict;
 
+  const statusText = running
+    ? "Comparing panels…"
+    : bothVerdictsIn
+      ? "Complete"
+      : "Idle";
+
   return (
-    <main className="min-h-screen p-4 space-y-4">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Compare panels</h1>
-        <div className="flex flex-wrap items-end gap-3">
-          <PanelSelect
-            id="panel-a"
-            label="Panel A"
-            value={panelA}
-            options={available}
-            onChange={setPanelA}
-            disabled={running}
-          />
-          <PanelSelect
-            id="panel-b"
-            label="Panel B"
-            value={panelB}
-            options={available}
-            onChange={setPanelB}
-            disabled={running}
-          />
-          {panelA && panelB && panelA === panelB && (
-            <p className="text-xs text-destructive self-center">
-              Pick two distinct panels.
-            </p>
-          )}
-        </div>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-4">
-        <aside>
-          <CaseInput onStart={handleStart} disabled={!canRun} />
+    <main className="mx-auto max-w-[1280px] space-y-[18px] p-4">
+      <TopBar panelLabel="A/B panel comparison" status={statusText} running={running} />
+
+      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[380px_1fr]">
+        {/* Left — panel pickers + case input */}
+        <aside className="space-y-[18px]">
+          <div className={`${CARD} space-y-3`}>
+            <h2 className="text-sm font-bold tracking-tight">Panels</h2>
+            <PanelSelect
+              id="panel-a"
+              label="Panel A"
+              value={panelA}
+              options={available}
+              onChange={setPanelA}
+              disabled={running}
+            />
+            <PanelSelect
+              id="panel-b"
+              label="Panel B"
+              value={panelB}
+              options={available}
+              onChange={setPanelB}
+              disabled={running}
+            />
+            {panelA && panelB && panelA === panelB && (
+              <p className="text-xs font-medium text-destructive">
+                Pick two distinct panels.
+              </p>
+            )}
+          </div>
+          <div className={CARD}>
+            <h2 className="mb-3 text-sm font-bold tracking-tight">Case chart</h2>
+            <CaseInput onStart={handleStart} disabled={!canRun} />
+          </div>
         </aside>
-        <section
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          aria-label="Side-by-side panel debates"
-          aria-busy={running}
-          aria-live="polite"
-        >
-          <PanelColumn panelId={panelA} state={states[panelA]} running={running} />
-          <PanelColumn panelId={panelB} state={states[panelB]} running={running} />
-        </section>
+
+        {/* Right — two equal panel stages + comparison summary */}
+        <div className="space-y-[18px]">
+          <section
+            className="grid grid-cols-1 gap-[18px] md:grid-cols-2"
+            aria-label="Side-by-side panel debates"
+            aria-busy={running}
+            aria-live="polite"
+          >
+            <PanelColumn panelId={panelA} state={states[panelA]} running={running} />
+            <PanelColumn panelId={panelB} state={states[panelB]} running={running} />
+          </section>
+          {bothVerdictsIn && <ComparisonSummary verdicts={verdicts} />}
+        </div>
       </div>
-      {bothVerdictsIn && <ComparisonSummary verdicts={verdicts} />}
     </main>
   );
+}
+
+/** Most recent hypothesis differential in a panel's stream, for the live table. */
+function latestHypothesisDiff(state: PanelState | undefined): Differential | null {
+  if (!state) return null;
+  for (let i = state.iterations.length - 1; i >= 0; i--) {
+    const msgs = state.iterations[i].messages;
+    for (let j = msgs.length - 1; j >= 0; j--) {
+      if (msgs[j].role === "hypothesis") {
+        return (msgs[j].structured_output as Differential | undefined) ?? null;
+      }
+    }
+  }
+  return null;
 }
 
 function routeEvent(
@@ -326,7 +358,10 @@ function PanelSelect({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+      <label
+        htmlFor={id}
+        className="text-[10.5px] font-extrabold uppercase tracking-wide text-faint"
+      >
         {label}
       </label>
       <select
@@ -334,9 +369,9 @@ function PanelSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled || options.length === 0}
-        className="rounded-md border bg-background px-2 py-1 text-sm"
+        className="rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] font-semibold text-ink-2 disabled:opacity-60"
       >
-        {options.length === 0 && <option value="">(loading...)</option>}
+        {options.length === 0 && <option value="">(loading…)</option>}
         {options.map((p) => (
           <option key={p.name} value={p.name}>
             {p.name}
@@ -358,13 +393,15 @@ function PanelColumn({
 }) {
   if (!state) {
     return (
-      <Card
-        className="p-4 text-sm text-muted-foreground"
+      <div
+        className={`${CARD} text-sm text-muted-foreground`}
         data-testid={`column-${panelId || "empty"}`}
       >
-        <p className="font-semibold mb-2">{panelId || "—"}</p>
+        <p className="mb-2 text-sm font-bold tracking-tight text-foreground">
+          {panelId || "—"}
+        </p>
         <p>Pick a case and press Begin to start.</p>
-      </Card>
+      </div>
     );
   }
 
@@ -372,13 +409,15 @@ function PanelColumn({
     (it, idx) => it.messages.length > 0 || idx === 0,
   );
   const hasMessages = visible.some((it) => it.messages.length > 0);
+  const liveDiff = latestHypothesisDiff(state);
+  const showDiff = !!state.verdict || !!liveDiff;
 
   return (
-    <Card className="p-4 space-y-3" data-testid={`column-${panelId}`}>
+    <div className={`${CARD} space-y-4`} data-testid={`column-${panelId}`}>
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">{panelId}</h2>
+        <h2 className="text-sm font-bold tracking-tight">{panelId}</h2>
         {state.verdict && (
-          <span className="text-xs text-muted-foreground">
+          <span className="font-mono text-[11.5px] text-muted-foreground">
             {state.verdict.iterations_used} iter · $
             {state.verdict.total_cost_usd.toFixed(4)}
           </span>
@@ -387,30 +426,48 @@ function PanelColumn({
       {state.error && (
         <div
           role="alert"
-          className="rounded-md border border-destructive bg-destructive/10 p-2 text-xs"
+          className="rounded-xl border border-destructive bg-destructive/10 p-2.5 text-xs"
         >
           <p className="font-semibold">Error: {state.error.code}</p>
           <p className="break-words">{state.error.message || "(no message)"}</p>
         </div>
       )}
-      {!hasMessages && !running && !state.error && (
-        <p className="text-sm text-muted-foreground italic">
-          Awaiting first agent...
-        </p>
-      )}
-      {visible.map((it) => (
-        <div key={it.iteration}>
-          <IterationDivider iteration={it.iteration} />
-          <div className="space-y-3">
-            {it.messages.map((msg, idx) => (
-              <AgentCard
-                key={`${msg.role}-${it.iteration}-${idx}`}
-                message={msg}
-              />
-            ))}
+      {showDiff && (
+        <div>
+          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-faint">
+            Ranked differential
           </div>
+          <DifferentialTable
+            verdict={state.verdict}
+            liveDifferential={liveDiff}
+          />
         </div>
-      ))}
-    </Card>
+      )}
+      <div>
+        <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-faint">
+          Deliberation
+        </div>
+        {!hasMessages && !running && !state.error && (
+          <p className="text-sm italic text-muted-foreground">
+            Awaiting first agent…
+          </p>
+        )}
+        <div className="space-y-3">
+          {visible.map((it) => (
+            <div key={it.iteration}>
+              <IterationDivider iteration={it.iteration} />
+              <div className="space-y-3">
+                {it.messages.map((msg, idx) => (
+                  <AgentCard
+                    key={`${msg.role}-${it.iteration}-${idx}`}
+                    message={msg}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
