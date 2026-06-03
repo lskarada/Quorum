@@ -45,3 +45,9 @@ methodologically, with safety/calibration borrowing from CHECK and MedAbstain.
 1. Open-source diagnostic orchestrator at MAI-DxO's chain-of-debate scope.
 2. MCP-native — any agent can invoke diagnostic deliberation as a tool call.
 3. Live web UI streaming the debate (research artifact for transparency studies).
+4. Calibrated posteriors — Hypothesis emits per-diagnosis probabilities scored
+   for honesty with Brier + ECE on a held-out set, not just a top-pick label.
+   The closed MAI-DxO reports accuracy, not calibration.
+5. Append-only audit trails — every agent message, Gatekeeper query, and
+   SafetyChecker verdict is logged for after-the-fact inspection, which the
+   non-device CDS posture (see `fda_2026_cds_guidance.md`) depends on.
