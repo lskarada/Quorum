@@ -1,10 +1,22 @@
 """FastAPI app entry point."""
 from __future__ import annotations
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import pathlib
 
-from quorum.api.routes import router
+from dotenv import load_dotenv
+
+# Load .env from repo root if present so OPENROUTER_API_KEY etc. are picked up.
+# Mirrors quorum/eval/cli.py. Done before quorum imports because module-level
+# init (e.g. the LLM client) reads the env — without this, `make dev` boots but
+# 500s on the first deliberation with "OPENROUTER_API_KEY not set".
+_REPO_ROOT_ENV = pathlib.Path(__file__).resolve().parents[4] / ".env"
+if _REPO_ROOT_ENV.exists():
+    load_dotenv(_REPO_ROOT_ENV)
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+from quorum.api.routes import router  # noqa: E402
 
 app = FastAPI(
     title="Quorum API",
