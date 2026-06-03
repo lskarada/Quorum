@@ -56,6 +56,9 @@ export default function Home() {
             <Button asChild size="lg" variant="outline">
               <Link to="/compare">Compare panels</Link>
             </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link to="/evidence">Evidence &amp; clinical grounding</Link>
+            </Button>
           </div>
         </div>
       </section>
