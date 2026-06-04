@@ -1,26 +1,12 @@
-"""Run the evaluation harness against a case corpus.
+"""Thin wrapper around the real eval CLI.
 
-Usage:
-    uv run python scripts/run_eval.py --corpus nejm [--limit 10] [--model claude-opus-4-7]
+Prefer the installed console script: `uv run quorum-eval run --corpus medqa ...`.
+This wrapper exists so `python scripts/run_eval.py ...` resolves to the same
+Typer app (sub-commands: run / score / report).
 """
 from __future__ import annotations
 
-import typer
-
-app = typer.Typer(add_completion=False)
-
-
-@app.command()
-def main(
-    corpus: str = typer.Option("nejm", help="Case corpus: nejm | medqa"),
-    limit: int | None = typer.Option(None, help="Cap number of cases"),
-    model: str = typer.Option("claude-opus-4-7", help="Default model for the panel"),
-) -> None:
-    """Run eval on a case corpus and write results to data/results/."""
-    # TODO: load cases via quorum.eval.corpus, run quorum.eval.runner,
-    # score via quorum.eval.scorer, emit report via quorum.eval.report.
-    raise NotImplementedError
-
+from quorum.eval.cli import app
 
 if __name__ == "__main__":
     app()

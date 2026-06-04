@@ -1,0 +1,74 @@
+{
+  "nejm-cpc-10-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI diagnosed an atrioesophageal fistula (esophageal fistula communicating with the atrium) rather than an esophageal-pericardial fistula (communicating with the pericardium), capturing the correct disease category of post-ablation esophageal fistula but specifying the wrong anatomical communication partner.",
+    "ground_truth": "Esophageal-pericardial fistula after percutaneous catheter ablation for atrial fibrillation",
+    "ai_committed": "Post-ablation atrioesophageal fistula"
+  },
+  "nejm-cpc-11-2026": {
+    "score": "full_credit",
+    "rationale": "The AI's committed diagnosis 'Narcolepsy type 1 (with cataplexy)' is identical to the ground truth diagnosis.",
+    "ground_truth": "Narcolepsy type 1 (with cataplexy)",
+    "ai_committed": "Narcolepsy type 1 (with cataplexy)"
+  },
+  "nejm-cpc-13-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified type II mixed cryoglobulinemic vasculitis with cryoglobulinemic glomerulonephritis, matching acceptable partial credit entries, but attributed it to post-HCV rather than identifying the underlying Waldenstrom macroglobulinemia/lymphoplasmacytic lymphoma as the primary diagnosis.",
+    "ground_truth": "Waldenstrom macroglobulinemia associated with type II cryoglobulinemic vasculitis (MYD88 wild-type variant)",
+    "ai_committed": "Type II mixed cryoglobulinemic vasculitis (monoclonal IgM-kappa / polyclonal IgG), post-hepatitis C virus, with cryoglobulinemic membranoproliferative glomerulonephritis"
+  },
+  "nejm-cpc-14-2026": {
+    "score": "no_credit",
+    "rationale": "The AI diagnosed paraneoplastic dermatomyositis associated with malignancy, which is neither the ground truth (SLE/IIM overlap) nor any of the acceptable partial credit diagnoses.",
+    "ground_truth": "Overlap syndrome of systemic lupus erythematosus and idiopathic inflammatory myopathy",
+    "ai_committed": "Paraneoplastic dermatomyositis associated with underlying malignancy"
+  },
+  "nejm-cpc-2-2026": {
+    "score": "no_credit",
+    "rationale": "The AI diagnosed Nocardia infection, which is a completely different pathogen from Klebsiella pneumoniae, and does not match the ground truth or any of the acceptable partial credit diagnoses.",
+    "ground_truth": "Disseminated infection with hypervirulent Klebsiella pneumoniae (K1 serotype) - liver abscess with metastatic infection to lung, brain, and eye (panophthalmitis)",
+    "ai_committed": "Disseminated Nocardia infection with pulmonary, hepatic, and orbital/ocular involvement"
+  },
+  "nejm-cpc-3-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified Lyme neuroborreliosis with neurologic involvement (cranial polyneuropathy/Bannwarth syndrome) but missed the Babesia microti coinfection that is part of the ground truth diagnosis.",
+    "ground_truth": "Lyme neuroborreliosis and Babesia microti coinfection",
+    "ai_committed": "Lyme neuroborreliosis with cranial polyneuropathy (Bannwarth syndrome)"
+  },
+  "nejm-cpc-4-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified PCP in the context of HIV/AIDS but missed the co-infection with Cryptococcus neoformans pneumonia, which is part of the ground truth diagnosis.",
+    "ground_truth": "Pneumocystis jirovecii pneumonia and Cryptococcus neoformans pneumonia in the context of advanced HIV-1 infection (AIDS)",
+    "ai_committed": "Pneumocystis jirovecii pneumonia (PCP) complicating advanced HIV/AIDS"
+  },
+  "nejm-cpc-5-2026": {
+    "score": "no_credit",
+    "rationale": "The AI diagnosed renovascular hypertension due to fibromuscular dysplasia, which is a completely different entity from a reninoma (juxtaglomerular cell tumor), a renin-secreting renal tumor causing primary hyperreninemic hypertension.",
+    "ground_truth": "Reninoma (juxtaglomerular cell tumor) causing primary hyperreninemic hypertension",
+    "ai_committed": "Renovascular hypertension due to fibromuscular dysplasia"
+  },
+  "nejm-cpc-6-2026": {
+    "score": "full_credit",
+    "rationale": "The AI committed to 'Eosinophilic granulomatosis with polyangiitis (EGPA)', which is the primary diagnosis in the ground truth and matches the full name/acronym exactly, even though it omitted the c-ANCA/anti-PR3 specifics and CHIP finding.",
+    "ground_truth": "Eosinophilic granulomatosis with polyangiitis (EGPA, formerly Churg-Strauss syndrome) with c-ANCA/anti-PR3 antibodies, with concurrent clonal hematopoiesis of indeterminate potential (CHIP)",
+    "ai_committed": "Eosinophilic granulomatosis with polyangiitis (EGPA)"
+  },
+  "nejm-cpc-7-2026": {
+    "score": "full_credit",
+    "rationale": "The AI's committed diagnosis of 'Periprosthetic joint infection due to Mycobacterium bovis BCG' is synonymous with the ground truth, correctly identifying both the periprosthetic joint infection and the specific causative organism (M. bovis BCG).",
+    "ground_truth": "Periprosthetic joint infection with drug-susceptible Mycobacterium bovis bacille Calmette-Guerin (M. bovis BCG) following remote intravesical BCG immunotherapy for bladder cancer",
+    "ai_committed": "Periprosthetic joint infection due to Mycobacterium bovis BCG"
+  },
+  "nejm-cpc-8-2026": {
+    "score": "full_credit",
+    "rationale": "The AI's committed diagnosis of 'Aspergillus flavus infective endocarditis with aortic root abscess and pseudoaneurysm' is essentially synonymous with the ground truth, capturing the specific organism (Aspergillus flavus), the endocarditis diagnosis, the aortic root abscess, and the contained rupture/pseudoaneurysm.",
+    "ground_truth": "Fungal endocarditis (Aspergillus flavus) involving the aortic and mitral valves with aortic-root abscess and contained rupture",
+    "ai_committed": "Aspergillus flavus infective endocarditis with aortic root abscess and pseudoaneurysm"
+  },
+  "nejm-cpc-9-2026": {
+    "score": "full_credit",
+    "rationale": "Doege-Potter Syndrome is the eponymous term specifically referring to non-islet cell tumor hypoglycemia caused by IGF-2-secreting mesenchymal tumors, which is synonymous with the ground truth diagnosis of NICTH due to a benign smooth-muscle abdominal tumor mediated by big IGF-II.",
+    "ground_truth": "Non-islet-cell tumor hypoglycemia (NICTH) due to a benign cellular smooth-muscle tumor of the abdomen, mediated by tumor production of high-molecular-weight IGF-II ('big IGF-II')",
+    "ai_committed": "Doege-Potter Syndrome (Non-Islet Cell Tumor Hypoglycemia due to IGF-2-Secreting Mesenchymal Tumor)"
+  }
+}

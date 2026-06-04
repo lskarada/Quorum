@@ -11,10 +11,10 @@ dev:
 	wait
 
 eval:
-	cd backend && uv run python scripts/run_eval.py --corpus nejm
+	cd backend && uv run quorum-eval run --corpus medqa --panel dev_cheap --n 3
 
 mcp:
-	cd backend && uv run python scripts/serve_mcp.py
+	cd backend && uv run python -m quorum.mcp_server.server
 
 test:
 	cd backend && uv run pytest

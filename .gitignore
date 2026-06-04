@@ -64,6 +64,12 @@ data/results/.spend_total.txt
 data/results/.spend_ledger.tsv
 # Local benchmark tooling — holdout SC driver scripts + run markers (not for the repo)
 data/results/.holdout_*
+# v3 NEJM holdout — committed voted artifacts (per-case judge verdicts + audit
+# trails) so the README headline is reproducible/inspectable from a clean clone.
+# These contain only final-diagnosis names, model commitments, scores, posteriors
+# and costs — NO paywalled NEJM case bodies. See docs/results_v3.md.
+!data/results/v3-holdout-sc-voted/
+!data/results/v3-holdout-baseline-voted/
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep

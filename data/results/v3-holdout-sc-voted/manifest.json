@@ -1,0 +1,16 @@
+{
+  "schema_version": "v2.run.v1",
+  "arm": "sc_aggregate",
+  "panel": "self_consistency_vote",
+  "n_cases": 12,
+  "started_at": 1780284097.209762,
+  "finished_at": 1780284097.209771,
+  "sc_k": 5,
+  "source_run_dirs": [
+    "data/results/v3-holdout-sc-r0",
+    "data/results/v3-holdout-sc-r1",
+    "data/results/v3-holdout-sc-r2",
+    "data/results/v3-holdout-sc-r3",
+    "data/results/v3-holdout-sc-r4"
+  ]
+}

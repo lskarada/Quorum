@@ -1,0 +1,74 @@
+{
+  "nejm-cpc-10-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI identified an esophageal fistula following AF ablation, which captures the disease category and context, but specified 'atrio-esophageal' fistula (communication between atrium and esophagus) rather than 'esophageal-pericardial' fistula (communication between esophagus and pericardium) as stated in the ground truth, making it a partial match aligned with the acceptable partial credit entries.",
+    "ground_truth": "Esophageal-pericardial fistula after percutaneous catheter ablation for atrial fibrillation",
+    "ai_committed": "Post-ablation atrio-esophageal fistula"
+  },
+  "nejm-cpc-11-2026": {
+    "score": "full_credit",
+    "rationale": "The AI's committed diagnosis 'Narcolepsy type 1 (with cataplexy)' exactly matches the ground truth diagnosis.",
+    "ground_truth": "Narcolepsy type 1 (with cataplexy)",
+    "ai_committed": "Narcolepsy type 1 (with cataplexy)"
+  },
+  "nejm-cpc-13-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified cryoglobulinemic vasculitis with glomerulonephritis and mixed type II cryoglobulinemia, which matches the acceptable partial credit category, but attributed it to HCV rather than Waldenstr\u00f6m macroglobulinemia/lymphoplasmacytic lymphoma, missing the underlying B-cell malignancy diagnosis.",
+    "ground_truth": "Waldenstrom macroglobulinemia associated with type II cryoglobulinemic vasculitis (MYD88 wild-type variant)",
+    "ai_committed": "Cryoglobulinemic vasculitis with glomerulonephritis (mixed type II/III, HCV-associated)"
+  },
+  "nejm-cpc-14-2026": {
+    "score": "no_credit",
+    "rationale": "The AI committed to a paraneoplastic syndrome associated with gynecologic malignancy, which is neither the ground truth (SLE/IIM overlap) nor any of the acceptable partial credit diagnoses.",
+    "ground_truth": "Overlap syndrome of systemic lupus erythematosus and idiopathic inflammatory myopathy",
+    "ai_committed": "Paraneoplastic syndrome associated with gynecologic malignancy (endometrial or cervical carcinoma) with paraneoplastic inflammatory myopathy/dermatomyositis"
+  },
+  "nejm-cpc-2-2026": {
+    "score": "no_credit",
+    "rationale": "The AI committed to invasive fungal rhinosinusitis (mucormycosis or Aspergillus), which is a completely different diagnosis from the ground truth of disseminated hypervirulent Klebsiella pneumoniae infection with liver abscess and metastatic spread.",
+    "ground_truth": "Disseminated infection with hypervirulent Klebsiella pneumoniae (K1 serotype) - liver abscess with metastatic infection to lung, brain, and eye (panophthalmitis)",
+    "ai_committed": "Invasive fungal rhinosinusitis with orbital extension (mucormycosis or Aspergillus)"
+  },
+  "nejm-cpc-3-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified Lyme neuroborreliosis with cranial neuropathy and meningitis, matching the acceptable partial credit criteria, but did not identify the Babesia microti coinfection that is part of the ground truth diagnosis.",
+    "ground_truth": "Lyme neuroborreliosis and Babesia microti coinfection",
+    "ai_committed": "Lyme neuroborreliosis (disseminated Borrelia burgdorferi infection with cranial neuropathy and meningitis)"
+  },
+  "nejm-cpc-4-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified Pneumocystis jirovecii pneumonia but missed the co-infection with Cryptococcus neoformans and the underlying HIV/AIDS context, making it a partial match.",
+    "ground_truth": "Pneumocystis jirovecii pneumonia and Cryptococcus neoformans pneumonia in the context of advanced HIV-1 infection (AIDS)",
+    "ai_committed": "Pneumocystis jirovecii pneumonia"
+  },
+  "nejm-cpc-5-2026": {
+    "score": "no_credit",
+    "rationale": "The AI committed to 'secondary hypertension due to renal parenchymal or renovascular disease,' which is a broad, nonspecific category that does not identify the specific diagnosis of reninoma/juxtaglomerular cell tumor or even a renin-secreting tumor causing hyperreninemic hypertension.",
+    "ground_truth": "Reninoma (juxtaglomerular cell tumor) causing primary hyperreninemic hypertension",
+    "ai_committed": "Secondary hypertension due to renal parenchymal or renovascular disease"
+  },
+  "nejm-cpc-6-2026": {
+    "score": "full_credit",
+    "rationale": "The AI committed to 'Eosinophilic Granulomatosis with Polyangiitis (EGPA),' which is synonymous with the ground truth diagnosis (EGPA/Churg-Strauss syndrome), even though it did not mention the ANCA specifics or CHIP finding.",
+    "ground_truth": "Eosinophilic granulomatosis with polyangiitis (EGPA, formerly Churg-Strauss syndrome) with c-ANCA/anti-PR3 antibodies, with concurrent clonal hematopoiesis of indeterminate potential (CHIP)",
+    "ai_committed": "Eosinophilic Granulomatosis with Polyangiitis (EGPA)"
+  },
+  "nejm-cpc-7-2026": {
+    "score": "partial_credit",
+    "rationale": "The AI correctly identified periprosthetic joint infection but missed the key specific etiology of M. bovis BCG as the causative organism linked to prior intravesical BCG therapy, capturing only the general disease category.",
+    "ground_truth": "Periprosthetic joint infection with drug-susceptible Mycobacterium bovis bacille Calmette-Guerin (M. bovis BCG) following remote intravesical BCG immunotherapy for bladder cancer",
+    "ai_committed": "Periprosthetic joint infection, late chronic/indolent type"
+  },
+  "nejm-cpc-8-2026": {
+    "score": "no_credit",
+    "rationale": "The AI's committed diagnosis of 'infective endocarditis with septic embolism and acute valvular dysfunction' does not specify fungal/Aspergillus etiology or the aortic root abscess/pseudoaneurysm, which are the defining features of the ground truth and acceptable partial credit diagnoses.",
+    "ground_truth": "Fungal endocarditis (Aspergillus flavus) involving the aortic and mitral valves with aortic-root abscess and contained rupture",
+    "ai_committed": "Infective endocarditis with septic embolism and acute valvular dysfunction"
+  },
+  "nejm-cpc-9-2026": {
+    "score": "no_credit",
+    "rationale": "The AI committed to insulinoma (a pancreatic beta-cell tumor causing endogenous insulin overproduction), which is mechanistically and anatomically distinct from non-islet-cell tumor hypoglycemia mediated by IGF-II from an abdominal smooth-muscle tumor.",
+    "ground_truth": "Non-islet-cell tumor hypoglycemia (NICTH) due to a benign cellular smooth-muscle tumor of the abdomen, mediated by tumor production of high-molecular-weight IGF-II ('big IGF-II')",
+    "ai_committed": "Insulinoma (pancreatic beta-cell tumor)"
+  }
+}
