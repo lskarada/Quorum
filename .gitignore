@@ -62,6 +62,8 @@ data/results/*.json
 data/results/*/
 data/results/.spend_total.txt
 data/results/.spend_ledger.tsv
+# Local benchmark tooling — holdout SC driver scripts + run markers (not for the repo)
+data/results/.holdout_*
 data/prompt_iteration/
 !data/cases/**/.gitkeep
 !data/results/.gitkeep
@@ -89,3 +91,7 @@ out/
 
 # Superpowers brainstorm artifacts (local only)
 .superpowers/
+
+# Claude Code working context (local only — not published to the repo)
+.claude/
+/CLAUDE.md
