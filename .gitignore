@@ -95,3 +95,4 @@ out/
 # Claude Code working context (local only — not published to the repo)
 .claude/
 /CLAUDE.md
+/rubric.md
