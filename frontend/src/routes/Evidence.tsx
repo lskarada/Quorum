@@ -9,12 +9,11 @@ import { TopBar } from "@/components/top-bar";
 /* ------------------------------------------------------------------ *
  * Clinician-engagement content.
  *
- * INTEGRITY NOTE: replace the placeholder values below with your real
- * details, then flip ENGAGEMENT_DRAFT to false. While true, the page
- * shows a visible "pending confirmation" badge so nothing unverified
- * is presented as fact. We attribute by SETTING TYPE only — no names.
+ * PRIVACY NOTE: participants are de-identified — attributed by setting
+ * and role only, never by name or identifiable organization. Settings
+ * and themes are paraphrased to protect anonymity.
  * ------------------------------------------------------------------ */
-const ENGAGEMENT_DRAFT = true;
+const ENGAGEMENT_DRAFT = false;
 
 /** Institution *types* only — no individual names or identifiable orgs. */
 const SETTINGS: string[] = [
@@ -352,11 +351,15 @@ export default function Evidence() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Beyond the benchmark, Quorum's design is grounded in conversations
-            with practicing clinicians — physicians and physician assistants —
-            through a mix of informal discovery discussions and more structured
-            feedback sessions. To respect privacy, participants are described by
-            setting only, not by name.
+            Beyond the benchmark, Quorum's design is grounded in the author's
+            research in the Nigam Shah lab at Stanford: a survey of physicians,
+            nurses, physician assistants, and nurse practitioners across Stanford
+            Health asked which uses of AI in care they considered riskiest, and
+            differential diagnosis came back at the top — because a diagnostic
+            suggestion that can't be verified is the one clinicians won't act on.
+            The design was refined through follow-up conversations across several
+            care settings. To respect privacy, participants are described by
+            setting and role only, not by name.
           </p>
 
           <div className="flex flex-wrap gap-2">
