@@ -68,10 +68,6 @@ Unit tests run without a key (`cd backend && uv run pytest -q`); only live
 deliberation (`make dev`) and `make eval` call the LLM and need
 `OPENROUTER_API_KEY` set in `.env`.
 
-## Status
-
-Pre-alpha. Built for Stanford CS153 (Spring 2026). 17-day solo build. See `docs/milestone.md`.
-
 ## Clinical grounding
 
 Quorum grew out of the author's research in the **Nigam Shah lab** at Stanford.
