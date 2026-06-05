@@ -58,6 +58,15 @@ verdict — is written to an append-only **AuditTrail JSONL** a reviewer can rep
 Output is a ranked differential with calibrated posteriors, a recommended next
 test, primary-source citations, and the audit trail.
 
+Every agent and the system as a whole are designed to **meticulously follow the
+FDA's guidelines on clinical decision support (CDS) software**: Quorum surfaces its
+reasoning, sources, and uncertainty so a clinician independently reviews the basis
+of each recommendation rather than relying on it, keeping the system in the
+non-device CDS lane by design. The full mapping to each FDA criterion is documented
+in [`research/fda_2026_cds_guidance.md`](research/fda_2026_cds_guidance.md) and
+summarized on the [`/regulatory`](frontend/src/routes/Regulatory.tsx) page of the
+web demo.
+
 This is a real, working artifact, not scaffolding: a multi-vendor LLM client,
 YAML-configurable panels, a side-by-side comparison runner, SSE streaming to the
 web UI, a self-consistency voting harness, an MCP stdio server, and an eval
@@ -72,6 +81,13 @@ unit tests** that pass without any API key.
 vote over `k=5` replicas; an LLM judge grades every committed diagnosis against the
 published final diagnosis. The holdout was screened for training-data contamination
 and scored a single time (no tuning on it).
+
+**Why only 12 cases?** The set is intentionally small because it is bounded by
+recency, not by effort: these are the most recent NEJM cases published *after* the
+training-data cutoff of every LLM in the panel. Restricting to post-cutoff cases is
+what guarantees no arm could have memorized the answer — so the n=12 ceiling is the
+price of a genuinely contamination-free holdout, not a sampling shortcut. As more
+post-cutoff cases publish, the holdout can grow without compromising that guarantee.
 
 | Arm | Top-1 (exact) | Top-1 or partial |
 |-----|---------------|------------------|
