@@ -6,8 +6,9 @@ Quorum is an open-source reproduction of cost-aware sequential diagnostic
 deliberation — the architectural shape of Microsoft's MAI-DxO
 ([arXiv 2506.22405](https://arxiv.org/abs/2506.22405)) — plus two structural
 additions Microsoft's closed system doesn't ship: **honest calibrated posteriors**
-(Brier + ECE on per-diagnosis probabilities) and **append-only AuditTrails** of
-every agent message, Gatekeeper query, and SafetyChecker verdict. MCP-native,
+(Brier score + ECE — Expected Calibration Error — on per-diagnosis probabilities)
+and **append-only AuditTrails** of every agent message, Gatekeeper query, and
+SafetyChecker verdict. MCP-native (Model Context Protocol),
 MIT-licensed, five Claude Sonnet 4.6 agents, with a live web UI that streams the
 debate in real time.
 
@@ -46,6 +47,24 @@ Five specialist agents deliberate on a case, all running on **Claude Sonnet 4.6*
 - **Dr. Challenger** — attacks the leading hypothesis
 - **Dr. Stewardship** — enforces cost-aware reasoning
 - **Dr. Checklist** — verifies internal consistency
+
+```mermaid
+flowchart LR
+    Case["Case<br/>vignette"] --> Panel
+    subgraph Panel["Deliberation loop (k rounds)"]
+        direction TB
+        H["Dr. Hypothesis"] --> TC["Dr. Test-Chooser"]
+        TC --> CH["Dr. Challenger"]
+        CH --> ST["Dr. Stewardship"]
+        ST --> CL["Dr. Checklist"]
+    end
+    Panel <-->|query / reveal findings| GK["Gatekeeper<br/>(holds findings,<br/>tracks test cost)"]
+    Panel --> SC{"SafetyChecker<br/>5 deterministic rules"}
+    SC -->|fail| Panel
+    SC -->|pass| Out["Ranked differential<br/>+ calibrated posteriors<br/>+ next test + citations"]
+    Panel -.->|every message & verdict| Audit[("Append-only<br/>AuditTrail JSONL")]
+    SC -.-> Audit
+```
 
 In sequential mode the panel queries a **Gatekeeper** that holds the case findings
 and reveals them turn-by-turn (SDBench-style), tracking simulated CMS-style test
@@ -94,8 +113,8 @@ post-cutoff cases publish, the holdout can grow without compromising that guaran
 | **Quorum** (5-agent + SafetyChecker) | **41.7%** (5/12) | **75.0%** (9/12) |
 | Single-model baseline (same model, one call) | 16.7% (2/12) | 58.3% (7/12) |
 
-Deliberation + safety gating **2.5× the exact-match rate** over the same model
-called once, on cases neither arm had seen. The full per-case table, methodology,
+Deliberation + safety gating **2.5× the exact-match rate** (41.7% vs 16.7%) over
+the same model called once, on cases neither arm had seen. The full per-case table, methodology,
 and limitations are in [`docs/results_v3.md`](docs/results_v3.md); the underlying
 per-case judge verdicts and audit trails are committed under
 [`data/results/v3-holdout-sc-voted/`](data/results/v3-holdout-sc-voted/) and
@@ -181,12 +200,12 @@ See the **Evidence** page in the web demo (`/evidence`) and
 
 ## AI usage & development process
 
-This project was built with the assistance AI coding tools — primarily Claude
+This project was built with the assistance of AI coding tools — primarily Claude
 Code (Anthropic) — for implementation, refactoring, test authoring, research
 synthesis, and documentation, under continuous human direction and careful review
-by the author. Design decisions, scope, evaluation methodology, and all go/no-go
-calls were made by the author; the AI executed and accelerated that work but every
-part of the design was made by the author as well as sourcing all the literature.
+by the author. Design decisions, scope, evaluation methodology, literature review,
+and all go/no-go calls were made by the author; the AI executed and accelerated
+that work.
 The five diagnostic agents themselves run on Claude Sonnet 4.6 (with Haiku 4.5 used
 for the Gatekeeper's fallback matcher and a Sonnet judge for scoring).
 
@@ -206,8 +225,11 @@ Quorum reproduces is cited throughout.
 
 ## Status
 
-Pre-alpha. See [`docs/milestone.md`](docs/milestone.md) for the CS153 Week 7
-deliverable and [`docs/results_v3.md`](docs/results_v3.md) for the current headline.
+A working research artifact, built solo for Stanford CS153 (Spring 2026): five
+deliberating agents, a live streaming web UI, a 262-test backend, an MCP server,
+and three versioned evaluation runs. See [`docs/milestone.md`](docs/milestone.md)
+for the CS153 Week 7 deliverable and [`docs/results_v3.md`](docs/results_v3.md)
+for the current headline result.
 
 ## Citation
 
